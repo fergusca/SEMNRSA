@@ -1,0 +1,18 @@
+Package: SEMNRSA
+Title: R package to perform SEM on NRSA data
+Version: 0.0.0.9000
+Authors@R: 
+    person(given = "C. Emi",
+           family = "Fergus",
+           role = c("aut", "cre"),
+           email = "fergus.emiko@epa.gov",
+           comment = c(ORCID = "0000-0001-8722-9788"))
+Description: A project workflow to perform structural equation models examining drivers of macroinvertebrate biotic condition using the NRSA datasets. 
+License: `use_mit_license()`, `use_gpl3_license()` or friends to pick a
+    license
+Encoding: UTF-8
+LazyData: true
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.1.2
+Depends: 
+    R (>= 2.10)
