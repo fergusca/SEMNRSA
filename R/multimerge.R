@@ -12,5 +12,5 @@
 multimerge = function(mergeme){
   filenames=list.files(path=mergeme, full.names=TRUE)
   datalist = lapply(filenames, function(x){read.csv(file=x,header=T)})
-  Reduce(function(x,y) {merge(x,y, by=c("SITE_ID","VISIT_NO"))}, datalist)
+  Reduce(function(x,y) {merge(x,y, by=c("SITE_ID","VISIT_NO"),all.x=TRUE)}, datalist)
 }

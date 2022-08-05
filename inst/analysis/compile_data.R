@@ -6,6 +6,7 @@
 ##
 ## 3/16/2022
 ## 5/26/2022 - added PHDI
+## 6/24/2022 - Added Omernik level III and IV ecoregion codes
 ###########
 
 rm(list=ls())
@@ -60,6 +61,7 @@ nrsa1819<-nrsa1819%>%
 # REORDER NRSA1819 variables
 nrsa1819<-nrsa1819%>%
   select(c("SITE_ID","VISIT_NO","DATE_COL","YEAR","SITETYPE","STATE","AG_ECO3","AG_ECO9","AG_ECO5",
+           "US_L3CODE","US_L4CODE",
            "LAT_DD83","LON_DD83","PROTOCOL","REALM",#"STRAH_ORD",
            "OE_SCORE",
            "AMMONIA_N_RESULT","ANC_RESULT","CHLORIDE_RESULT","COLOR_RESULT","COND_RESULT","DOC_RESULT","MAGNESIUM_RESULT","SODIUM_RESULT",
@@ -124,7 +126,7 @@ nrsa0809$LDCBF_G08 <- as.numeric(nrsa0809$LDCBF_G08)
 str(nrsa0809$LDCBF_G08)
 head(nrsa0809$LDCBF_G08)
 
-## THREE DATASETS HAVE 175 variables in matching order
+## THREE DATASETS HAVE 177 variables in matching order
 
 ########################
 ## COMBINE DATASETS
@@ -140,17 +142,37 @@ wqii<-wqii_org%>%
   select(c("SITE_ID","VISIT_NO","YEAR","UNIQUE_ID"))
 
 # Merge compiled NRSA and WQII subset together using left_join
-all_dat_id<-left_join(all_dat,wqii,
+all_dat_wid<-left_join(all_dat,wqii,
                           by=c("SITE_ID","VISIT_NO","YEAR"))
-names(all_dat_id)
+names(all_dat_wid)
 
 # Drop duplicates - goes back to 6674
 #all_dat_id=all_dat_id%>%
 #  distinct(SITE_ID,VISIT_NO, .keep_all=TRUE)
 
-table(all_dat_id$nrsa_survey)
+table(all_dat_wid$nrsa_survey)
 # nrsa0809 nrsa1314 nrsa1819
 # 2303     2261     2110
+
+
+#####################
+## GRAB OMERNIK ECOREGION NAMES
+# NRSA 2013-14
+site_org <-read.csv("C:/Users/EFergus/OneDrive - Environmental Protection Agency (EPA)/a_NLA_OE_project/Data/NRSA_1213_website/nrsa1314_siteinformation_wide_04292019.csv")
+# GET DISTINCT LEVEL III
+l3<-site_org%>%
+  distinct(US_L3CODE, .keep_all=TRUE)%>%
+  select(US_L3CODE, US_L3NAME)
+# GET DISTINCT LEVEL IV
+l4<-site_org%>% # n=577
+  distinct(US_L4CODE, .keep_all=TRUE)%>%
+  select(US_L4CODE, US_L4NAME)
+
+# MERGE ECOREGION NAME COLUMNS INTO DATASET
+all_dat_id3<- left_join(all_dat_wid,l3,
+                       by="US_L3CODE")
+all_dat_id <- left_join(all_dat_id3, l4,
+                        by="US_L4CODE")
 
 ######################
 ## SUBSET DATA
@@ -174,7 +196,7 @@ table(duplic$nrsa_survey)
 #nrsa0809 nrsa1314 nrsa1819
 #   1059     1462     1128
 
-table(all_dat$nrsa_survey,all_dat$VISIT_NO)
+table(all_dat_id$nrsa_survey,all_dat_id$VISIT_NO)
 #           1    2
 #  nrsa0809 2123  180
 #  nrsa1314 2069  192
@@ -261,6 +283,8 @@ table(all_dat_resample$RESAMPLE)
 # 1420       803       992      3459
 
 
+###############
+## PROCESS VARIABLES
 ###########
 # FIX PTL_RESULT
 # ONE OBS has PTL_RESULT = -2 (NRS18_OK_11082, VISIT_NO=1)
@@ -268,11 +292,23 @@ all_dat_resample<-all_dat_resample %>%
   mutate(PTL_RESULT = na_if(PTL_RESULT, -2))
 summary(all_dat_resample$PTL_RESULT)
 
-# SCALE d-excess by 10 to have similar variances to other predictors
-all_dat_resample$d.excess_sc <- all_dat_resample$d.excess/10
+# MAKE d-excess AN EVAPORATION INDEX WHERE POSITIVE NUMBERS MEAN MORE EVAPORATION
+# AND SCALE BY 10 to make variance on similar scale as other predictors
+all_dat_resample<- all_dat_resample%>%
+  mutate(d.excess_sc = d.excess/10)%>%
+  mutate(evap_index=(d.excess - 10)*-1)%>%
+  mutate(evap_index_sc = evap_index/10)
+
+summary(all_dat_resample$d.excess)
+summary(all_dat_resample$d.excess_sc)
+summary(all_dat_resample$evap_index)
+summary(all_dat_resample$evap_index_sc)
+var(all_dat_resample$evap_index,na.rm = T) #[1] 43.90143
+var(all_dat_resample$evap_index_sc,na.rm = T) # [1] 0.4390143
+
 
 # CREATE CRITCIAL DIAMETER VARIABLE (Phil email 5/26/22)
-#  Compared to the LDCBF_G08 and the derived var is a little differnt for some and fills in some NAs
+#  Compared to the LDCBF_G08 and the derived var is a little different for some and fills in some NAs
 all_dat_resample <- all_dat_resample%>%
   mutate(LDCBF_use = LSUB_DMM - LRBS_use)#%>%
   #select(LDCBF_use, LDCBF_G08)
@@ -359,14 +395,24 @@ all_dat_resample2<-left_join(all_dat_resample,mmi_red,by=c("SITE_ID","VISIT_NO",
 
 
 ####################
-## SCALE MMI 0-1
+## SCALE MMI 0-10
 all_dat_resample2$MMI_BENT_sc <- all_dat_resample2$MMI_BENT/100
 summary(all_dat_resample2$MMI_BENT_sc)
+var(all_dat_resample2$MMI_BENT_sc,na.rm = T) #[1] 0.04159292
+#var(all_dat_resample2$MMI_BENT,na.rm = T) #[1] 415.9292
+#var(all_dat_resample2$LRBS_use,na.rm=T) #[1] 1.378704
+#var(all_dat_resample2$asin_PCTAGR_WS) #[1] 0.1297567
+#var(all_dat_resample2$LQLow_kmcl,na.rm=T) #[1] 1.019986
 
-## SCALE EPT 0-0.35
-all_dat_resample2$EPT_RICH_sc <- all_dat_resample2$EPT_RICH/100
+## SCALE EPT 0-3.5
+all_dat_resample2$EPT_RICH_sc <- all_dat_resample2$EPT_RICH/10
 summary(all_dat_resample2$EPT_RICH_sc)
-summary(all_dat_resample2$EPT_RICH)
+#summary(all_dat_resample2$EPT_RICH)
+var(all_dat_resample2$EPT_RICH_sc,na.rm = T) #[1] 0.3785358
+#var(all_dat_resample2$EPT_RICH,na.rm = T) #[1] 37.85358
+
+# OE
+#var(all_dat_resample2$OE_SCORE,na.rm=T) #[1] 0.09672672
 
 #####################
 ## READ IN PROCESSED PHDI data 5/26/22 n = 6674, 4 vars
@@ -378,6 +424,59 @@ all_dat_resample3 <-left_join(all_dat_resample2, phdi,
                           by=c("UNIQUE_ID","DATE_COL"))
 
 names(all_dat_resample3)
+
+## CREATE PHDI INDEX INDICATING DROUGHT WHERE POSITIVE VALUES MEAN MORE DROUGHT AND NEGATIVE MEAN WET
+all_dat_resample3<- all_dat_resample3%>%
+  mutate(drought_mean=phdi_mean*-1)%>%
+  mutate(drought_month=phdi_month*-1)
+
+summary(all_dat_resample3$drought_mean)
+var(all_dat_resample3$drought_mean,na.rm = T) #[1] 5.779492
+
+###################
+## CREATE NEW ECOREGION BASED ON EMAP-WEST
+# SEE ALAN H Email 6/27/22
+all_dat_resample3<- all_dat_resample3 %>%
+  mutate(ECO_L3_mod = case_when(
+    (US_L3CODE %in% c('23','8'))~'MT-SWEST',
+    (US_L3CODE %in% c('11','15','16','17','41'))~'MT-NROCK',
+    (US_L3CODE %in% c('1','4','5','77','78','9'))~'MT-PNW',
+    (US_L3CODE %in% c('19','21'))~'MT-SROCK',
+    (US_L3CODE %in% c('25','46','47','48'))~'PL-NCULT',
+    (US_L3CODE %in% c('26','42','43','44'))~'PL-RANGE',
+    (US_L3CODE %in% c('10','12','80'))~'XE-NORTH',
+    (US_L3CODE %in% c('6','7'))~'XE-CALIF',
+    (US_L3CODE %in% c('18','20','22'))~'XE-EPLAT',
+    (US_L3CODE %in% c('13','14','79','81','24'))~'XE-SOUTH',
+  ))
+table(all_dat_resample3$ECO_L3_mod)
+#MT-NROCK   MT-PNW MT-SROCK MT-SWEST PL-NCULT PL-RANGE XE-CALIF XE-EPLAT XE-NORTH XE-SOUTH
+#   327      245      165       44      383      657       69      249      161      183
+
+# Met with Alan and Phil 6/28/22
+# Decided to start by lumping Western mountains together (N. Rockies + Pacific NW mount)
+# And Appalachian
+all_dat_resample3<- all_dat_resample3 %>%
+  mutate(ECO_L3_4_mod = case_when(
+    (US_L3CODE %in% c('23','8'))~'MT-SWEST',
+    (US_L3CODE %in% c('11','15','16','17','41','1','4','5','77','78','9'))~'MT-WEST',
+    (US_L3CODE %in% c('19','21'))~'MT-SROCK',
+    (US_L3CODE %in% c('25','46','47','48'))~'PL-NCULT',
+    (US_L3CODE %in% c('26','42','43','44'))~'PL-RANGE',
+    (US_L3CODE %in% c('10','12','80'))~'XE-NORTH',
+    (US_L3CODE %in% c('6','7'))~'XE-CALIF',
+    (US_L3CODE %in% c('18','20','22'))~'XE-EPLAT',
+    (US_L3CODE %in% c('13','14','79','81','24'))~'XE-SOUTH',
+    (US_L4CODE %in% c('67a','67b','67f','67g'))~'APP-valley',# Identify whether App ridge or valley
+    (US_L4CODE %in% c('67c','67d','67h','67i'))~'APP-ridge',
+    (US_L3CODE %in% c('58','60','62','66','68','69'))~'APP-ridge'
+  ))
+
+table(all_dat_resample3$ECO_L3_4_mod)
+#APP-ridge APP-valley   MT-SROCK   MT-SWEST    MT-WEST   PL-NCULT   PL-RANGE   XE-CALIF
+#596        109        165         44        572        383        657         69
+#XE-EPLAT   XE-NORTH   XE-SOUTH
+#249        161        183
 
 #################
 ## EXPORT CSV OF COMPILED DATA - ALL OBSERVATIONS, ALL SURVEYS VISITS 1 & 2
