@@ -384,13 +384,15 @@ write.csv(dat_names,"data_processed/nrsa0809/column_vars0809.csv",row.names = FA
 
 ################################
 ## PROCESS DATA TO BE ABLE TO MERGE WITH OTHER SURVEYS
-## READ PROCESSED DATA
+## READ PROCESSED DATA n = 2303
 nrsa_strmcat_proc<-read.csv("data_processed/nrsa0809/nrsa0809_strmcat_all.csv")
 
 # RENAME VARS TO MATCH OTHER SURVEYS
 nrsa_strmcat_proc<-nrsa_strmcat_proc%>%
   rename("H2O_dD"="dD..vsmow.")%>%
-  rename("H2O_d18O"="d18O..vsmow.")
+  rename("H2O_d18O"="d18O..vsmow.")%>%
+  rename("US_L3CODE" = "US_L3CODE_2015")%>%
+  rename("US_L4CODE" = "US_L4CODE_2015")
 
 # LANDCOVER/USE CLASSES
 nrsa_strmcat_proc <-nrsa_strmcat_proc %>%
@@ -439,6 +441,7 @@ nrsa_strmcat_proc <-nrsa_strmcat_proc %>%
 ## REDUCE VARIABLES
 nrsa0809<-nrsa_strmcat_proc%>%
   select(c("SITE_ID","VISIT_NO","DATE_COL","YEAR","SITE_CLASS","STATE","AGGR_ECO3_2015","AGGR_ECO9_2015","AG_ECO5",
+           "US_L3CODE","US_L4CODE",
            "LAT_DD83","LON_DD83","PROTOCOL","REALM","STRAHLERORDER",
            "MMI_BENT","OE_SCORE_OLD","OE_SCORE",
            "NH4","ANC","CL","COLOR","COND","DOC","MG","SODIUM","K","NTL","PTL","SO4","TSS","TURB",
@@ -471,7 +474,7 @@ nrsa0809<-nrsa_strmcat_proc%>%
            "NABD_DensWs","NABD_NIDStorWs","NABD_NrmStorWs",
            "AgKffactWs","FertWs","ManureWs","NPDESDensWs","NPDESDensWsRp100"))
 
-#n = 2123 with 170 variables
+#n = 2123 with 180 variables
 #######################
 #GET COLUMN NAMES TO CHECK
 dat_names_share<-data.frame(colnames(nrsa0809))

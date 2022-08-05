@@ -10,6 +10,7 @@ library(dplyr)
 library(tidyr)
 
 library(devtools)
+devtools::load_all()
 library(SEMNRSA)
 
 # LOAD data stored in Rpackage - a .rda file
@@ -316,7 +317,7 @@ write.csv(dat_names,"data_processed/nrsa1819/column_vars1819.csv", row.names=FAL
 
 ################################
 ## PROCESS DATA TO BE ABLE TO MERGE WITH OTHER SURVEYS
-## READ PROCESSED DATA
+## READ PROCESSED DATA n = 2110
 nrsa_strmcat_proc<-read.csv("data_processed/nrsa1819/nrsa1819_strmcat_all.csv")
 
 ## # LANDCOVER/USE CLASSES
@@ -366,6 +367,7 @@ nrsa_strmcat_proc <-nrsa_strmcat_proc %>%
 
 nrsa1819<-nrsa_strmcat_proc%>%
   select(c("SITE_ID","VISIT_NO","DATE_COL","YEAR","SITETYPE","STATE_NM","AG_ECO3","AG_ECO9","AG_ECO5",
+           "US_L3CODE","US_L4CODE",
            "LAT_DD83","LON_DD83","PROTOCOL","REALM","STRAH_ORD",
            "OE_SCORE",
            "AMMONIA_N_RESULT","ANC_RESULT","CHLORIDE_RESULT","COLOR_RESULT","COND_RESULT","DOC_RESULT","MAGNESIUM_RESULT","SODIUM_RESULT",
@@ -397,7 +399,7 @@ nrsa1819<-nrsa_strmcat_proc%>%
            "PCTWDWET_WsRp100", "PCTHBWET_WsRp100", "PCTIMP_WS", "PCTIMP_WsRp100",
            "NABD_DensWs","NABD_NIDStorWs","NABD_NrmStorWs",
            "AgKffactWs","FertWs","ManureWs","NPDESDensWs","NPDESDensWsRp100"))
-#n = 2110 (visits 1 & 2) with 165 variables
+#n = 2110 (visits 1 & 2) with 178 variables
 
 #"RPRAT","QRVEG1","MMI_BENT","OE_SCORE_OLD"
 
