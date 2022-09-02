@@ -1,0 +1,330 @@
+---
+title: 'Data exploration: WMT & XER'
+author: "Emi"
+date: '2022-08-20'
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(warning=FALSE, message=FALSE,echo = TRUE)
+
+```
+
+## Data exploration steps
+
+Count number of sites missing observations by variable
+Histograms, scatterplots, and correlations of variables
+
+```{r, echo=FALSE, message=FALSE}
+# LOAD PACKAGES
+library(dplyr)
+library(ggplot2)
+library(tidyr)
+library(kableExtra)
+library(knitr)
+library(stringr)
+
+library(devtools)
+devtools::load_all()
+library(SEMNRSA)
+
+##########
+## READ PROCESSED DATA
+# COMPILED NRSA SURVEYS WITH SUBSET OF VARIABLES
+#  INCLUDES ALL RESAMPLED SITES AND VISITS 1 & 2
+
+# PROCESSED - all 0809 and only new sites from later surveys
+#  VISITS 1 and 2 n = 4578
+dat_org <- read.csv("C:/Users/EFergus/OneDrive - Environmental Protection Agency (EPA)/a_NLA_OE_project/Project_repository/SEMNRSA/data_processed/Compiled/nrsa081318_nonresampled_VISIT_12.csv")
+
+
+# PROCESSED DATA VISIT_NO=1 ONLY n = 4389
+dat_proc<-dat_org%>%
+  filter(VISIT_NO==1)
+
+###############
+## PROCESS DATA DROPPING MISSING PROTOCOL
+dat_proc$PROTOCOL<-as.factor(dat_proc$PROTOCOL)
+summary(dat_proc$PROTOCOL)
+
+# n = 4371
+dat_proc<- dat_proc%>%
+  drop_na(PROTOCOL)%>%
+  filter(PROTOCOL=="BOATABLE"|PROTOCOL=="WADEABLE")
+
+# DROP NOPHAB class from REALM
+dat_proc$PROTOCOL<-droplevels(dat_proc$PROTOCOL)
+
+#########################
+## SUBSET BY AGGREGATED 9- ECOREGION
+
+# WMT
+wmt<-dat_proc%>%
+  filter(AG_ECO9=="WMT")%>%
+  drop_na(LOE_QLow_cl)
+
+#summary(wmt$LOE_Qbkf_cl)
+
+# SCALE CUMULATIVE PRECIPITATION in wmt
+wmt$PSUMPY_SY_WS_sc<-scale(wmt$PSUMPY_SY_WS)
+#summary(wmt$PSUMPY_SY_WS_sc)
+
+# WADEABLE n = 323
+wmt_w <- wmt %>%
+  filter(PROTOCOL=="WADEABLE")
+
+# BOATABLE n = 167
+wmt_b <-wmt %>%
+  filter(PROTOCOL=="BOATABLE")
+
+##############
+## XER
+xer<-dat_proc%>%
+  filter(AG_ECO9=="XER")%>%
+  drop_na(LOE_QLow_cl)
+
+#summary(xer$LOE_Qbkf_cl)
+
+# SCALE CUMULATIVE PRECIPITATION in wmt
+xer$PSUMPY_SY_WS_sc<-scale(xer$PSUMPY_SY_WS)
+#summary(xer$PSUMPY_SY_WS_sc)
+
+# WADEABLE n = 272
+xer_w <- xer %>%
+  filter(PROTOCOL=="WADEABLE")
+
+# BOATABLE n = 143
+xer_b <-xer %>%
+  filter(PROTOCOL=="BOATABLE")
+```
+
+
+## Number of missing observations by variable
+
+```{r, echo=FALSE, echo=FALSE, results='hide'}
+# WMT
+na_count <-wmt_w %>%
+  summarise(across(everything(),~sum(is.na(.))))
+
+t<- as.data.frame(t(na_count))
+na_count_long<-t%>%
+  filter(V1>0)
+
+na_count_x<-xer_w%>%
+  summarise(across(everything(),~sum(is.na(.))))
+t_x<-as.data.frame(t(na_count_x))
+na_count_long_x <- t_x%>%
+  filter(V1>0)
+
+# MAKE TABLES
+
+```
+
+WMT
+```{r, echo=FALSE}
+kable(na_count_long, caption = "Missing observations: WMT")%>%
+  kable_styling()
+
+```
+XER
+```{r, echo=FALSE}
+kable(na_count_long_x, caption = "Missing observations: XER")%>%
+  kable_styling()
+```
+
+Histograms, scatterplots, and correlations of variable subsets
+
+# Climate variables
+```{r, echo=FALSE, message=FALSE}
+# CLIMATE AND BIOTIC INDICES
+clim_w<-wmt_w %>%
+  filter(!is.na(PSUMPY_SY_WS))%>%
+  select(c(PSUMPY_SY_WS,drought_mean,Tmax8110Ws,
+           OE_SCORE, MMI_BENT, EPT_RICH))%>%
+  #LOE_XCMGW_use,LOE_XFC_NAT_use, LOE_RBS_use)) %>%
+  GGally::ggpairs()+ #,progress=FALSE
+  ggtitle("WMT wade")
+
+print(clim_w)
+
+clim_x<-xer_w %>%
+  filter(!is.na(PSUMPY_SY_WS))%>%
+  select(c(PSUMPY_SY_WS,drought_mean,Tmax8110Ws,
+           OE_SCORE, MMI_BENT, EPT_RICH))%>%
+  #LOE_XCMGW_use,LOE_XFC_NAT_use, LOE_RBS_use)) %>%
+  GGally::ggpairs()+
+  ggtitle("Xeric wade")
+
+clim_x
+```
+
+
+# Anthropogenic variables: WMT
+```{r, echo=FALSE, message=FALSE}
+# HUMAN AND BIOTIC INDICES
+anthro_w<-wmt_w %>%
+  filter(!is.na(PSUMPY_SY_WS))%>%
+  select(c(asin_PCTURB_WS,asin_PCTAGR_WS,
+           W1_HAG,W1_HNOAG,AgKffactWs,
+           OE_SCORE, MMI_BENT, EPT_RICH))%>%
+  #LOE_XCMGW_use,LOE_XFC_NAT_use, LOE_RBS_use)) %>%
+  GGally::ggpairs()+ #,progress=FALSE
+  ggtitle("WMT wade: human+biotic")
+
+print(anthro_w)
+
+# HUMAN + NATURAL
+anthro_nat_w<-wmt_w %>%
+  filter(!is.na(PSUMPY_SY_WS))%>%
+  select(c(asin_PCTURB_WS,asin_PCTAGR_WS,
+           W1_HAG,W1_HNOAG,
+           ElevWs,BFIWs,PermWs,HydrlCondWs,L_SLOPE_DPTH))%>%
+  #LOE_XCMGW_use,LOE_XFC_NAT_use, LOE_RBS_use)) %>%
+  GGally::ggpairs()+ #,progress=FALSE
+  ggtitle("WMT wade: human+natural")
+
+print(anthro_nat_w)
+
+# XER
+anthro_x<-xer_w %>%
+  filter(!is.na(PSUMPY_SY_WS))%>%
+  select(c(asin_PCTURB_WS,asin_PCTAGR_WS,
+           W1_HAG,W1_HNOAG,AgKffactWs,
+           OE_SCORE, MMI_BENT, EPT_RICH))%>%
+  #LOE_XCMGW_use,LOE_XFC_NAT_use, LOE_RBS_use)) %>%
+  GGally::ggpairs()+ #,progress=FALSE
+  ggtitle("XER wade: human+biotic")
+
+print(anthro_w)
+```
+
+WMT outlier observation
+```{r, echo=FALSE, message=FALSE}
+# Cooks distance to see if observation is highly influential
+# https://stats.stackexchange.com/questions/164099/removing-outliers-based-on-cooks-distance-in-r-language
+# THERE IS A ONE OBSERVATION WITH HIGH AGRICULTURE IN THE WATERSHED
+# Regression of PCTAG and OE
+# Cook's distance is way to look at influence of observation - takes observations leverage and residual values - higher values indicate higher leverage & residuals
+fit<-lm(OE_SCORE~asin_PCTAGR_WS, data=wmt_w)
+test<-wmt_w%>%
+  filter(!is.na(OE_SCORE))
+test$cooksd<-cooks.distance(fit)
+cooksd <- cooks.distance(fit)
+
+# Plot the Cook's Distance using the traditional 4/n criterion
+# https://stats.stackexchange.com/questions/87962/cooks-distance-cut-off-value
+sample_size <- nrow(test)
+plot(cooksd, pch="*", cex=2, main="Influential Obs by Cooks distance")  # plot cook's distance
+abline(h = 4/sample_size, col="red")  # add cutoff line
+text(x=1:length(cooksd)+1, y=cooksd, labels=ifelse(cooksd>4/sample_size, names(cooksd),""), col="red")  # add labels
+
+# IDENTIFY OUTLIERS BASED ON COOK'S DISTANCE
+# Some use 4/n as a threshold to identify influential obs - but it should not be used as a reason to drop them - but rather think more critically about them - a sensitivity test
+test$outlier<-ifelse(test$cooksd < 4/nrow(wmt_w),"keep", "delete")
+
+# EXAMINE AGRICULTURAL OUTLIERS
+test2<-test%>%
+filter(outlier=="delete")%>%
+select(SITE_ID,VISIT_NO,DATE_COL, YEAR, STATE,PCTAGR_WS,NTL_RESULT,LRBS_use,W1_HAG,W1_HNOAG,Lpt01_XCMGW,LQLow_kmcl,LQbkf_kmcl,WsAreaSqKm,OE_SCORE,MMI_BENT, EPT_RICH)
+
+# Table of number of outliers based on Cook's distance agriculture
+agr_out<- test2%>%
+summarise(n=n())
+
+
+```
+
+Agriculture outlier in WMT wadeable subset
+```{r, echo=FALSE, message=FALSE}
+print("Number of agriculture Ws outliers in WMTw subset based on Cook's d =")
+nrow(test2)
+
+# Plot distribution of agriculture
+plot(test2$OE_SCORE~test2$PCTAGR_WS)
+abline(lm(test2$OE_SCORE~test2$PCTAGR_WS))
+```
+
+
+# Habitat variables
+```{r, echo=FALSE, message=FALSE}
+# HABITAT AND BIOTIC INDICES
+hab_w<-wmt_w %>%
+  filter(!is.na(PSUMPY_SY_WS))%>%
+  select(c(Lpt01_XCMGW,Lpt01_XFC_NAT,LRBS_use,
+           OE_SCORE, MMI_BENT, EPT_RICH))%>%
+  #LOE_XCMGW_use,LOE_XFC_NAT_use, LOE_RBS_use)) %>%
+  GGally::ggpairs()+ #,progress=FALSE
+  ggtitle("WMT wade: habitat +biotic")
+
+print(hab_w)
+
+# Habitat + Human
+hab_anthro_w<-wmt_w %>%
+  filter(!is.na(PSUMPY_SY_WS))%>%
+  select(c(Lpt01_XCMGW,Lpt01_XFC_NAT,LRBS_use,
+           asin_PCTURB_WS,asin_PCTAGR_WS,
+           W1_HAG,W1_HNOAG,L_NTL))%>%
+  #LOE_XCMGW_use,LOE_XFC_NAT_use, LOE_RBS_use)) %>%
+  GGally::ggpairs()+ #,progress=FALSE
+  ggtitle("WMT wade: human+habitat")
+
+print(hab_anthro_w)
+```
+
+# Anthropogenic variables: XER
+```{r, echo=FALSE, message=FALSE}
+# HUMAN AND BIOTIC INDICES
+# XER
+anthro_x<-xer_w %>%
+  filter(!is.na(PSUMPY_SY_WS))%>%
+  select(c(asin_PCTURB_WS,asin_PCTAGR_WS,
+           W1_HAG,W1_HNOAG,AgKffactWs,
+           OE_SCORE, MMI_BENT, EPT_RICH))%>%
+  #LOE_XCMGW_use,LOE_XFC_NAT_use, LOE_RBS_use)) %>%
+  GGally::ggpairs()+ #,progress=FALSE
+  ggtitle("XER wade: human+biotic")
+
+print(anthro_x)
+
+# HUMAN + NATURAL
+anthro_nat_x<-xer_w %>%
+  filter(!is.na(PSUMPY_SY_WS))%>%
+  select(c(asin_PCTURB_WS,asin_PCTAGR_WS,
+           W1_HAG,W1_HNOAG,
+           ElevWs,BFIWs,PermWs,HydrlCondWs,L_SLOPE_DPTH))%>%
+  #LOE_XCMGW_use,LOE_XFC_NAT_use, LOE_RBS_use)) %>%
+  GGally::ggpairs()+ #,progress=FALSE
+  ggtitle("XER wade: human+natural")
+
+print(anthro_nat_x)
+
+```
+
+# Habitat variables
+```{r, echo=FALSE, message=FALSE}
+# HABITAT AND BIOTIC INDICES
+hab_x<-xer_w %>%
+  filter(!is.na(PSUMPY_SY_WS))%>%
+  select(c(Lpt01_XCMGW,Lpt01_XFC_NAT,LRBS_use,
+           OE_SCORE, MMI_BENT, EPT_RICH))%>%
+  #LOE_XCMGW_use,LOE_XFC_NAT_use, LOE_RBS_use)) %>%
+  GGally::ggpairs()+ #,progress=FALSE
+  ggtitle("XER wade: habitat +biotic")
+
+print(hab_x)
+
+# Habitat + Human
+hab_anthro_x<-xer_w %>%
+  filter(!is.na(PSUMPY_SY_WS))%>%
+  select(c(Lpt01_XCMGW,Lpt01_XFC_NAT,LRBS_use,
+           asin_PCTURB_WS,asin_PCTAGR_WS,
+           W1_HAG,W1_HNOAG,L_NTL))%>%
+  #LOE_XCMGW_use,LOE_XFC_NAT_use, LOE_RBS_use)) %>%
+  GGally::ggpairs()+ #,progress=FALSE
+  ggtitle("XER wade: human+habitat")
+
+print(hab_anthro_x)
+```
+
+```{r, echo=FALSE, message=FALSE}
+```
