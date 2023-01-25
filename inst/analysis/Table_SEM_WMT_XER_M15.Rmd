@@ -1,0 +1,238 @@
+---
+title: "Table_SEM_WMT_XER_M15"
+author: "Emi"
+date: '2022-12-06'
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Packages and data
+```{r, echo=FALSE, message=FALSE}
+library(dplyr)
+library(tidyr)
+library(lavaan)
+library(kableExtra)
+library(knitr)
+library(stringr)
+
+library(devtools)
+devtools::load_all()
+library(SEMNRSA)
+
+# SEM Standardized OUTPUT
+# ECO9 WMT
+## OE
+oe<-read.csv("C:/Users/EFergus/OneDrive - Environmental Protection Agency (EPA)/a_NLA_OE_project/Project_repository/Routput/SEM_output/WMTw_m15_OE_CI.csv")
+
+## MMI
+mmi<- read.csv("C:/Users/EFergus/OneDrive - Environmental Protection Agency (EPA)/a_NLA_OE_project/Project_repository/Routput/SEM_output/WMTw_m15_MMI_CI.csv")
+
+## EPT
+ept<- read.csv("C:/Users/EFergus/OneDrive - Environmental Protection Agency (EPA)/a_NLA_OE_project/Project_repository/Routput/SEM_output/WMTw_m15_EPT_CI.csv")
+
+########################
+# ECO9 XER
+## OE
+oe_x<-read.csv("C:/Users/EFergus/OneDrive - Environmental Protection Agency (EPA)/a_NLA_OE_project/Project_repository/Routput/SEM_output/XERw_m15_OE_CI.csv")
+
+## MMI
+mmi_x<- read.csv("C:/Users/EFergus/OneDrive - Environmental Protection Agency (EPA)/a_NLA_OE_project/Project_repository/Routput/SEM_output/XERw_m15_MMI_CI.csv")
+
+## EPT
+ept_x<- read.csv("C:/Users/EFergus/OneDrive - Environmental Protection Agency (EPA)/a_NLA_OE_project/Project_repository/Routput/SEM_output/XERw_m15_EPT_CI.csv")
+
+```
+
+# Processing estimated model effects
+```{r, echo=FALSE, message=FALSE}
+
+# Need to treat SEMNRSA like a package to be able to run multimerge function
+devtools::load_all()
+
+# Call function sem_eff_tab to process the raw SEM output
+# Selects Total, Direct, and Indirect Effects on OE
+# And relabels predictor variables to more useful names
+# O/E
+oe_proc<- sem_eff_tab(oe)
+names(oe_proc)
+
+# MMI
+mmi_proc<-sem_eff_tab(mmi)
+
+# EPT
+ept_proc<-sem_eff_tab(ept)
+
+######
+## XER
+# O/E
+oe_x_proc<- sem_eff_tab(oe_x)
+names(oe_proc)
+
+# MMI
+mmi_x_proc<-sem_eff_tab(mmi_x)
+
+# EPT
+ept_x_proc<-sem_eff_tab(ept_x)
+
+```
+
+## Table Full WMT OE
+```{r, echo=FALSE}
+kable(oe_proc, caption = "WMT OE: Standardized Direct, Indirect, and Total Effects on benthic O/E")%>%
+  kable_styling()
+```
+
+## Table MMI
+```{r, echo=FALSE}
+kable(mmi_proc, caption = "WMT MMI: Standardized Direct, Indirect, and Total Effects on benthic MMI")%>%
+  kable_styling()
+```
+
+## Table EPT
+```{r, echo=FALSE}
+kable(ept_proc, caption = "WMT EPT: Standardized Direct, Indirect, and Total Effects on benthic EPT")%>%
+  kable_styling()
+```
+
+
+## Table Full XER OE
+```{r, echo=FALSE}
+kable(oe_x_proc, caption = "XER OE: Standardized Direct, Indirect, and Total Effects on benthic O/E")%>%
+  kable_styling()
+```
+
+## Table MMI
+```{r, echo=FALSE}
+kable(mmi_x_proc, caption = "XER MMI: Standardized Direct, Indirect, and Total Effects on benthic MMI")%>%
+  kable_styling()
+```
+
+## Table EPT
+```{r, echo=FALSE}
+kable(ept_x_proc, caption = "Xer EPT: Standardized Direct, Indirect, and Total Effects on benthic EPT")%>%
+  kable_styling()
+```
+
+
+## Model Fit Tables
+```{r, echo=FALSE}
+# LOAD SEM MODEL FIT TABLES
+fit_wmt_oe<-read.csv("C:/Users/EFergus/OneDrive - Environmental Protection Agency (EPA)/a_NLA_OE_project/Project_repository/Routput/SEM_output/WMTw_m15_OE_fit.csv")
+
+fit_wmt_mmi<- read.csv("C:/Users/EFergus/OneDrive - Environmental Protection Agency (EPA)/a_NLA_OE_project/Project_repository/Routput/SEM_output/WMTw_m15_MMI_fit.csv")
+
+fit_wmt_ept <- read.csv("C:/Users/EFergus/OneDrive - Environmental Protection Agency (EPA)/a_NLA_OE_project/Project_repository/Routput/SEM_output/WMTw_m15_EPT_fit.csv")
+
+fit<-bind_rows(fit_wmt_oe,fit_wmt_mmi, fit_wmt_ept)
+
+kable(fit, caption = "Model fit parameters for WMT")%>%
+  kable_styling()
+
+```
+
+## XER Model Fit Tables
+```{r, echo=FALSE}
+# LOAD SEM MODEL FIT TABLES
+fit_xer_oe<-read.csv("C:/Users/EFergus/OneDrive - Environmental Protection Agency (EPA)/a_NLA_OE_project/Project_repository/Routput/SEM_output/XERw_m15_OE_fit.csv")
+
+fit_xer_mmi<- read.csv("C:/Users/EFergus/OneDrive - Environmental Protection Agency (EPA)/a_NLA_OE_project/Project_repository/Routput/SEM_output/XERw_m15_MMI_fit.csv")
+
+fit_xer_ept <- read.csv("C:/Users/EFergus/OneDrive - Environmental Protection Agency (EPA)/a_NLA_OE_project/Project_repository/Routput/SEM_output/XERw_m15_EPT_fit.csv")
+
+fit_x<-bind_rows(fit_xer_oe,fit_xer_mmi, fit_xer_ept)
+
+kable(fit_x, caption = "Model fit parameters for XER")%>%
+  kable_styling()
+
+```
+
+# R2 Tables
+```{r, echo=FALSE}
+# Read in R2 tables for all endogenous variables
+# WEST O/E
+R2_wmt_oe<- read.csv("C:/Users/EFergus/OneDrive - Environmental Protection Agency (EPA)/a_NLA_OE_project/Project_repository/Routput/SEM_output/WMTw_m15_OE_R2.csv")
+
+R2_wmt_mmi<-read.csv("C:/Users/EFergus/OneDrive - Environmental Protection Agency (EPA)/a_NLA_OE_project/Project_repository/Routput/SEM_output/WMTw_m15_MMI_R2.csv")
+
+R2_wmt_ept<-read.csv("C:/Users/EFergus/OneDrive - Environmental Protection Agency (EPA)/a_NLA_OE_project/Project_repository/Routput/SEM_output/WMTw_m15_EPT_R2.csv")
+
+# Apply R2 table rename function
+R2_wmt_oe_mod<-r2_tab(R2_wmt_oe)
+R2_wmt_mmi_mod<-r2_tab(R2_wmt_mmi)
+R2_wmt_ept_mod<-r2_tab(R2_wmt_ept)
+
+# Modify tables and then bring together
+R2_wmt_oe_mod2<-R2_wmt_oe_mod%>%
+  mutate(Model = "OE")%>%
+  select(Model,Response,R2)%>%
+  #rename(R2 = est, Response=lhs)%>%
+  mutate(across(where(is.numeric), round,2))
+
+R2_wmt_mmi_mod2<-R2_wmt_mmi_mod%>%
+  mutate(Model = "MMI")%>%
+  select(Model,Response,R2)%>%
+  #rename(R2 = est, Response=lhs)%>%
+  mutate(across(where(is.numeric), round,2))
+
+R2_wmt_ept_mod2<-R2_wmt_ept_mod%>%
+  mutate(Model = "EPT")%>%
+  select(Model,Response,R2)%>%
+  #rename(R2 = est, Response=lhs)%>%
+  mutate(across(where(is.numeric), round,2))
+
+r2_all<-rbind(R2_wmt_oe_mod2,R2_wmt_mmi_mod2, R2_wmt_ept_mod2)
+
+```
+
+## Table all R2 WMT
+```{r, echo=FALSE}
+kable(r2_all, caption = "R2 estimates across models WMT")%>%
+  kable_styling()
+```
+
+## R2 XER 
+```{r, echo=FALSE}
+# Read in R2 tables for all endogenous variables
+# XER O/E
+R2_xer_oe<- read.csv("C:/Users/EFergus/OneDrive - Environmental Protection Agency (EPA)/a_NLA_OE_project/Project_repository/Routput/SEM_output/XERw_m15_OE_R2.csv")
+
+R2_xer_mmi<-read.csv("C:/Users/EFergus/OneDrive - Environmental Protection Agency (EPA)/a_NLA_OE_project/Project_repository/Routput/SEM_output/XERw_m15_MMI_R2.csv")
+
+R2_xer_ept<-read.csv("C:/Users/EFergus/OneDrive - Environmental Protection Agency (EPA)/a_NLA_OE_project/Project_repository/Routput/SEM_output/XERw_m15_EPT_R2.csv")
+
+# Apply R2 table rename function
+R2_xer_oe_mod<-r2_tab(R2_xer_oe)
+R2_xer_mmi_mod<-r2_tab(R2_xer_mmi)
+R2_xer_ept_mod<-r2_tab(R2_xer_ept)
+
+# Modify tables and then bring together
+R2_xer_oe_mod2<-R2_xer_oe_mod%>%
+  mutate(Model = "OE")%>%
+  select(Model,Response,R2)%>%
+  #rename(R2 = est, Response=lhs)%>%
+  mutate(across(where(is.numeric), round,2))
+
+R2_xer_mmi_mod2<-R2_xer_mmi_mod%>%
+  mutate(Model = "MMI")%>%
+  select(Model,Response,R2)%>%
+  #rename(R2 = est, Response=lhs)%>%
+  mutate(across(where(is.numeric), round,2))
+
+R2_xer_ept_mod2<-R2_xer_ept_mod%>%
+  mutate(Model = "EPT")%>%
+  select(Model,Response,R2)%>%
+  #rename(R2 = est, Response=lhs)%>%
+  mutate(across(where(is.numeric), round,2))
+
+r2_all_x<-rbind(R2_xer_oe_mod2,R2_xer_mmi_mod2, R2_xer_ept_mod2)
+
+```
+
+## Table XER R2
+```{r, echo=FALSE}
+kable(r2_all_x, caption = "R2 estimates across models XER")%>%
+  kable_styling()
+```
