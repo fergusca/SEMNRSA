@@ -1,6 +1,6 @@
 ##################
 ## BARCHARTS OF TOTAL EFFECTS OF PREDICTORS
-## RESPONSE XERIC ECO9: OE, MMI, EPT
+## RESPONSE WMT & XER ECO9: OE, MMI, EPT
 ## WADEABLE SITES
 ## Model v15
 ## Automated method taking R output and getting total effects rather than manipulating data in excel
@@ -40,16 +40,16 @@ vid_d <- c("#440154","#443983","#31688e","#21918c","#35b779","#90d743","#fde725"
 vid_i <- c("#440154","#443983","#31688e","#21918c","#440154","#35b779")
 
 #############
-## READ IN MODEL OUTPUT MODEL 15 - XER
+## READ IN MODEL OUTPUT MODEL 15 - WMT
 # SEM Standardized OUTPUT
 ## OE
-oe_x<-read.csv("C:/Users/EFergus/OneDrive - Environmental Protection Agency (EPA)/a_NLA_OE_project/Project_repository/Routput/SEM_output/XERw_m15_OE_CI.csv")
+oe<-read.csv("C:/Users/EFergus/OneDrive - Environmental Protection Agency (EPA)/a_NLA_OE_project/Project_repository/Routput/SEM_output/WMTw_m15_OE_CI.csv")
 
 ## MMI
-mmi_x<- read.csv("C:/Users/EFergus/OneDrive - Environmental Protection Agency (EPA)/a_NLA_OE_project/Project_repository/Routput/SEM_output/XERw_m15_MMI_CI.csv")
+mmi<- read.csv("C:/Users/EFergus/OneDrive - Environmental Protection Agency (EPA)/a_NLA_OE_project/Project_repository/Routput/SEM_output/WMTw_m15_MMI_CI.csv")
 
 ## EPT
-ept_x<- read.csv("C:/Users/EFergus/OneDrive - Environmental Protection Agency (EPA)/a_NLA_OE_project/Project_repository/Routput/SEM_output/XERw_m15_EPT_CI.csv")
+ept<- read.csv("C:/Users/EFergus/OneDrive - Environmental Protection Agency (EPA)/a_NLA_OE_project/Project_repository/Routput/SEM_output/WMTw_m15_EPT_CI.csv")
 
 
 #######################
@@ -61,37 +61,37 @@ library(SEMNRSA)
 # Selects Total, Direct, and Indirect Effects on OE
 # And relabels predictor variables to more useful names
 # O/E
-oe_proc_x<- sem_eff_tab(oe_x)%>%
+oe_proc<- sem_eff_tab(oe)%>%
   mutate(Model="OE")
-names(oe_proc_x)
+names(oe_proc)
 
 # MMI
-mmi_proc_x<-sem_eff_tab(mmi_x)%>%
+mmi_proc<-sem_eff_tab(mmi)%>%
   mutate(Model="MMI")
 
 # EPT
-ept_proc_x<-sem_eff_tab(ept_x)%>%
+ept_proc<-sem_eff_tab(ept)%>%
   mutate(Model="EPT")
 
 #############################
 # Combine datasets
-teff_x<- bind_rows(oe_proc_x,mmi_proc_x,ept_proc_x)
+teff<- bind_rows(oe_proc,mmi_proc,ept_proc)
 
-names(teff_x)
-table(teff_x$Predictor,teff_x$Model)
+names(teff)
+table(teff$Predictor,teff$Model)
 
 # ORDER PREDICTOR VARIABLES
-teff_x$Predictor <- ordered(teff_x$Predictor, levels=c("Agr Ws","Developed Ws","Dam","Precipitation","Max Temp","Drought index",
-                                                       "Bankfull flow","Summer flow","Evaporation indicator","Slope*depth","Stream power",
-                                                       "Agr index Rp","Non-agr index Rp",
-                                                       "Forest Rp","Terrestrial cover Rp","Wetland Rp","Riparian site index","Instream cover",
-                                                       "Bed stability","TP","TN","Sulfate","Turbidity")) #"Instream cover","agr","SO4"
-table(teff_x$Predictor)
+teff$Predictor <- ordered(teff$Predictor, levels=c("Agr Ws","Developed Ws","Dam","Precipitation","Max Temp","Drought index",
+                                                   "Bankfull flow","Summer flow","Evaporation indicator","Slope*depth","Stream power",
+                                                   "Agr index Rp","Non-agr index Rp",
+                                                   "Forest Rp","Terrestrial cover Rp","Wetland Rp","Riparian site index","Instream cover",
+                                                   "Bed stability","TP","TN","Sulfate","Turbidity")) #"Instream cover","agr","SO4"
+table(teff$Predictor)
 
 
 # CREATE CATEGORIES
-teff_x$Category <-teff_x$Predictor
-teff_x <- teff_x %>%
+teff$Category <-teff$Predictor
+teff <- teff %>%
   mutate(Category = recode_factor(Category,
                                   "Agr Ws"="Land use","Developed Ws"="Land use","Dam"="Land use",
                                   "Max Temp"="Climate","Precipitation"="Climate","Drought index"="Climate",
@@ -102,30 +102,30 @@ teff_x <- teff_x %>%
                                   "Agr index Rp" = "Riparian land use", "Non-agr index Rp" = "Riparian land use",
                                   "TN"="Chemistry","TP"="Chemistry","Sulfate"="Chemistry","Turbidity"="Chemistry")) #
 
-teff_x$Category <- ordered(teff_x$Category, levels=c("Land use","Climate","Hydrology","Morphometry","Riparian land use","Riparian cover","Habitat","Chemistry"))
-table(teff_x$Category)
+teff$Category <- ordered(teff$Category, levels=c("Land use","Climate","Hydrology","Morphometry","Riparian land use","Riparian cover","Habitat","Chemistry"))
+table(teff$Category)
 
 
 # ORDER EFFECT
-teff_x$Effects <- ordered(teff_x$Effects, levels=c("Total","Direct","Indirect"))
-table(teff_x$Effects)
+teff$Effects <- ordered(teff$Effects, levels=c("Total","Direct","Indirect"))
+table(teff$Effects)
 
 # ORDER BY RESPONSE AND DRIVER CLASS
-teff_x$model<-ordered(teff_x$Model, levels=c("OE","MMI","EPT"))
+teff$model<-ordered(teff$Model, levels=c("OE","MMI","EPT"))
 
 
 ######################
 ## FIGURE OF PROPORTION OF TOTAL EFFECTS ONLY
 ## SUBSET DATA TO HAVE ONLY TOTAL EFFECTS
-teff_total_x <- teff_x %>%
+teff_total <- teff %>%
   filter(Effects == "Total")
 
 
 ############################
 ## FIGURE WITH THREE PANELS: OE, MMI, EPT
 #########################
-## TOTAL EFFECTS
-total_x<-ggplot(teff_total_x,aes(Predictor,est.std,fill=Category)) +
+## TOTAL EFFECTS OE
+total<-ggplot(teff_total,aes(Predictor,est.std,fill=Category)) +
   geom_bar(stat = "identity", position=position_dodge()) +
   geom_errorbar(aes(ymin=ci.lower, ymax=ci.upper), width=.2, # est_std-se_std
                 position=position_dodge(.9))+
@@ -137,32 +137,49 @@ total_x<-ggplot(teff_total_x,aes(Predictor,est.std,fill=Category)) +
   theme_bw(base_size=12)+
   theme(plot.title = element_text(family = "AR",face="plain",size=14, hjust=0.5),
         axis.text.x = element_text(family = "AR", angle=45, hjust=1,size=12,
-                                   colour=c(rep("#440154",3), rep("#443983",2),rep("#31688e",3),rep("#21918c",1),rep("#440154",2),
+                                   colour=c(rep("#440154",2), rep("#443983",2),rep("#31688e",3),rep("#21918c",1),rep("#440154",1),
                                             rep("#35b779",3),rep("#90d743",1),rep("#fde725",2))),#, colour=c(rep("#8c510a",3),rep("#bf812d",1),rep("#dfc27d",3),rep("#c7eae5",2),rep("#80cdc1",1),rep("#c7eae5",1),rep("#35978f",2),rep("#01665e",1))),
-        axis.ticks.y = element_blank(),
-        axis.text.y = element_blank(),
-        #axis.text.y = element_text(family = "AR", size=12),
-        axis.title.y = element_blank(),#element_text(family="AR"), #
+        axis.text.y = element_text(family = "AR", size=12),
+        axis.title.y = element_text(family="AR"), #element_blank(),#
         strip.text.x = element_text(family="AR", size=12),
         panel.grid.major =  element_line(colour = NA),
         panel.grid.minor=element_line(colour = NA),
         # panel.spacing = unit(c(1,1,0,4), "lines"),
-        legend.position= "none",#"bottom",
+        legend.position= "bottom",
         legend.key.size = unit(10, 'point'),
         legend.title=element_blank(),
         legend.text=element_text(family="AR", size=11))+
   ylab("Total effects")+
   xlab(NULL)+
-  ggtitle("XER")
+  ggtitle("WMT")
 
 
-total_x
+total
 
 ###################
 # PRINT TOTAL EFFECTS
-tiff(filename="C:/Users/EFergus/OneDrive - Environmental Protection Agency (EPA)/a_NLA_OE_project/Project_repository/Routput/Figures/Tot_eff_ECO9_XERw_m15_OE_MMI_EPT.tiff",
+tiff(filename="C:/Users/EFergus/OneDrive - Environmental Protection Agency (EPA)/a_NLA_OE_project/Project_repository/Routput/Figures/Tot_eff_ECO9_WMTw_m15_OE_MMI_EPT.tiff",
      width=6, height = 8, units="in", res=300)
-total_x
+total
 dev.off()
 
 
+
+
+#########################
+## COMBINE WMT AND XER - run XER Fig code
+# GET LEGEND
+legend <- get_legend(total)
+
+# REMOVE LEGEND
+total <- total + theme(legend.position="none")
+
+# ARRANGE MULTIPLE GRAPHS AND LEGEND
+# https://stackoverflow.com/questions/13649473/add-a-common-legend-for-combined-ggplots
+tiff(filename="C:/Users/EFergus/OneDrive - Environmental Protection Agency (EPA)/a_NLA_OE_project/Project_repository/Routput/Figures/Tot_eff_ECO9_WMTXERw_m15_OE_MMI_EPT.tiff",
+     width=8, height=8, units="in", res=300)
+grid.arrange(arrangeGrob(total,
+                         total_x,
+                         ncol=2,widths=c(4,3.5)),
+             legend,nrow=2,heights=c(8, .5))
+dev.off()
