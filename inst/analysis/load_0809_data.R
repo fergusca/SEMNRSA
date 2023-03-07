@@ -8,8 +8,10 @@ rm(list=ls())
 # Libraries
 library(dplyr)
 library(tidyr)
+library(naniar)
 
 library(devtools)
+devtools::load_all("./") # Loads current directory
 library(SEMNRSA)
 
 # LOAD data stored in Rpackage - a .rda file
@@ -45,6 +47,9 @@ site_org$YEAR <-format(site_org$DATE_COL,"%Y")
 table(site_org$YEAR)
 #2008 2009
 #868 1452
+# Remove UID - this may be old? - will replace with UID from benthic O/E dataset Karen B shared
+site_org<-site_org%>%
+  select(!UID)
 
 # Reduce datasets to merge together
 chem_vars <- c("SITE_ID","VISIT_NO",
@@ -86,7 +91,7 @@ phab <-phab_org%>%
            "RPRAT",
            "PCT_BDRK",
            "XFC_ALG","XFC_AQM","XFC_LWD","XFC_NAT","V1W_MSQ",
-           "XCDENBK","XCDENMID","XCL","XGB","XC","XCMGW",
+           "XCDENBK","XCDENMID","XCDENBK","XCDENMID","XCL","XGB","XGW","XC","XCMGW",  # "XCS","XMW","XCM","XPCAN","XPCM","XPCMG",
            "QR1","QRVEG1","RDIST1",
            "W1_HALL","W1H_WALL","W1_HNOAG","W1_HAG"))
 #THESE DO NOT EXIST for the 2008-09 data
@@ -143,7 +148,7 @@ benthic_oe_org$DATE_COL<-as.Date(benthic_oe_org$DATE_COL, format="%m/%d/%Y")
 benthic_oe_org$YEAR <-format(benthic_oe_org$DATE_COL,"%Y")
 benthic_oe <-benthic_oe_org%>%
   filter(YEAR==2008|YEAR==2009)%>%
-  select(c("SITE_ID","VISIT_NO","OE_SCORE"))
+  select(c("UID","SITE_ID","VISIT_NO","OE_SCORE"))
 
 #PHab O/E
 phab_oe <- phab_oe_org%>%
@@ -366,7 +371,7 @@ names(second)
 
 ## COMBINE SUBSETS TOGETHER USING ROWBIND
 nrsa_strmcat_proc<-bind_rows(first,second)
-#n = 2303 w/281 variables
+#n = 2303 w/287 variables
 
 # SUBSET ONLY VISIT_NO = 1 n = 2123 sites
 nrsa_strmcat1<-nrsa_strmcat_proc %>%
@@ -438,13 +443,27 @@ nrsa_strmcat_proc <-nrsa_strmcat_proc %>%
             PctWdWet2008_WsRp100, PctHbWet2008_WsRp100, PctImp2008Ws,
             PctImp2008WsRp100))
 
+# CALCULATE XMW (woody riparian vegetation in understory)
+# XCMGW - XC - XGW = XMW
+nrsa_strmcat_proc<- nrsa_strmcat_proc%>%
+  mutate(XMW = XCMGW - XGW - XC) %>%
+  mutate(XMW = case_when(
+    XMW<0 ~ 0,
+    TRUE ~ XMW
+  ))
+
+# One observation was strange and not adding up - make into NA
+nrsa_strmcat_proc$XMW[nrsa_strmcat_proc$SITE_ID=="FW08MT025" & nrsa_strmcat_proc$VISIT_NO==1]<- NA
+
+summary(nrsa_strmcat_proc$XMW)
+
 ## REDUCE VARIABLES
 nrsa0809<-nrsa_strmcat_proc%>%
-  select(c("SITE_ID","VISIT_NO","DATE_COL","YEAR","SITE_CLASS","STATE","AGGR_ECO3_2015","AGGR_ECO9_2015","AG_ECO5",
+  select(c("UID","SITE_ID","VISIT_NO","DATE_COL","YEAR","SITE_CLASS","STATE","AGGR_ECO3_2015","AGGR_ECO9_2015","AG_ECO5",
            "US_L3CODE","US_L4CODE",
            "LAT_DD83","LON_DD83","PROTOCOL","REALM","STRAHLERORDER",
            "MMI_BENT","OE_SCORE_OLD","OE_SCORE",
-           "NH4","ANC","CL","COLOR","COND","DOC","MG","SODIUM","K","NTL","PTL","SO4","TSS","TURB",
+           "NH4","ANC","CL","COLOR","COND","DOC","MG","SODIUM","K","NO3","NO2","NTL","PTL","SO4","TSS","TURB",
            "RT_WQI","CL_pt","SO4_pt","PTL_pt","NTL_pt","TURB_pt","ENTERO_PT", "DO_PT","PH_PT","WQII",
            "H2O_dD","H2O_d18O","d.excess",
            "MAST_SY","MSST_SY","MWST_SY",
@@ -452,7 +471,7 @@ nrsa0809<-nrsa_strmcat_proc%>%
            "XDEPTH_CM","SDDEPTH_CM","XWXD","RP100","XBKF_W","XBKF_H","XINC_H","SINU","REACHLEN",
            "LSUB_DMM","XEMBED","PCT_FN","PCT_SAFN","PCT_SFGF","LDMB_BW5","LRBS_BW5","LRBS_G08","PCT_FAST","PCT_SLOW",
            "RPRAT","PCT_BDRK","XFC_ALG","XFC_AQM","XFC_LWD","XFC_NAT","V1W_MSQ","XCDENBK","XCDENMID",
-           "XCL","XGB","XC","XCMGW","QR1","QRVEG1","RDIST1","W1_HALL","W1H_WALL","W1_HNOAG","W1_HAG",
+           "XCL","XGB","XGW","XMW","XC","XCMGW","QR1","QRVEG1","RDIST1","W1_HALL","W1H_WALL","W1_HNOAG","W1_HAG",
            "W1H_CROP","XSLOPE_use","XWIDTH_use",
            "Lpt01_XCMGW","Lpt01_XFC_NAT","LRBS_use",
            "RDIST_COND","LRBS_Cond_use","LOE_RBS_use",
@@ -472,9 +491,11 @@ nrsa0809<-nrsa_strmcat_proc%>%
            "PCTSHRB_WsRp100", "PCTGRS_WsRp100", "PCTHAY_WsRp100", "PCTCROP_WsRp100",
            "PCTWDWET_WsRp100", "PCTHBWET_WsRp100", "PCTIMP_WS", "PCTIMP_WsRp100",
            "NABD_DensWs","NABD_NIDStorWs","NABD_NrmStorWs",
+           "RdDensWs","RdDensWsRp100",
+           "PopDen2010Ws","PopDen2010WsRp100",
            "AgKffactWs","FertWs","ManureWs","NPDESDensWs","NPDESDensWsRp100"))
 
-#n = 2123 with 180 variables
+#n = 2123 with 184 variables
 #######################
 #GET COLUMN NAMES TO CHECK
 dat_names_share<-data.frame(colnames(nrsa0809))

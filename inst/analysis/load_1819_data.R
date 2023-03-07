@@ -10,7 +10,7 @@ library(dplyr)
 library(tidyr)
 
 library(devtools)
-devtools::load_all()
+devtools::load_all("./") # Loads current directory
 library(SEMNRSA)
 
 # LOAD data stored in Rpackage - a .rda file
@@ -31,7 +31,7 @@ strcat_org <-read.csv("C:/Users/EFergus/OneDrive - Environmental Protection Agen
 #site_org2 <- read.csv("C:/Users/EFergus/OneDrive - Environmental Protection Agency (EPA)/a_NLA_OE_project/Data/NRSA_0809_website/ext_siteinfo.csv")
 
 # Load other NRSA data compiled across surveys
-benthic_oe_org<-read.csv("C:/Users/EFergus/OneDrive - Environmental Protection Agency (EPA)/a_NLA_OE_project/Data/NRSA2008-2019_OE_Scores.csv")
+benthic_oe_org<-read.csv("C:/Users/EFergus/OneDrive - Environmental Protection Agency (EPA)/a_NLA_OE_project/Data/NRSA_benthic_indices/NRSA2008-2019_OE_Scores.csv")
 isotope_org <- read.csv("C:/Users/EFergus/OneDrive - Environmental Protection Agency (EPA)/a_NLA_OE_project/Data/Water_isotope/NRSA 2018 2019 Water Isotope.csv")
 phab_oe_org<-read.csv("C:/Users/EFergus/OneDrive - Environmental Protection Agency (EPA)/a_NLA_OE_project/Data/NRSA_PHab_Discharge/NRSA_PHab_Discharge_OE1819.csv")
 wqii_org<-read.csv("C:/Users/EFergus/OneDrive - Environmental Protection Agency (EPA)/a_NLA_OE_project/Data/WQII/wqii_nrsa.csv")
@@ -43,6 +43,9 @@ site_org$YEAR <-format(site_org$DATE_COL,"%Y")
 table(site_org$YEAR)
 # 2018 2019
 # 1044 1068
+# Remove UID - this may be old? - will replace with UID from benthic O/E dataset Karen B shared
+site_org<-site_org%>%
+  select(!UID)
 
 # Reduce datasets to merge together
 chem <- chem_org%>%
@@ -76,7 +79,7 @@ phab <-phab_org%>%
            "RpRat","RPMXDEP_CM","RPXDEP_CM",
            "PCT_BDRK",
            "XFC_ALG","XFC_AQM","XFC_LWD","XFC_BRS", "XFC_OHV","XFC_BIG","XFC_NAT","XFC_UCB","V1W_MSQ",
-           "XCDENBK","XCDENMID","XCL","XGB","XC","XCM","XCMGW","XPCAN","XPCM","XPCMG",
+           "XCDENBK","XCDENMID","XCL","XGB","XGW","XMW","XC","XCS","XCL","XCM","XCMGW","XPCAN","XPCM","XPCMG",
            "QR1","QRVeg1","RDIST1",
            "W1_HALL","W1H_WALL","W1H_LOG","W1_HNOAG","W1_HAG"))
 
@@ -87,6 +90,7 @@ strcat <-strcat_org%>%
   select("SITE_ID",
          "CatAreaSqKm","WsAreaSqKm","CatAreaSqKmRp100","WsAreaSqKmRp100",
          "HydrlCondWs","OMHWs",
+         "RdDensWs","RdDensWsRp100","RdDens_WS_PctFull","RdDens_RipBuf100_WS_PctFullRp100",
          "DamDensWs","DamNIDStorWs","DamNrmStorWs",
          "NABD_DensWs","NABD_NIDStorWs","NABD_NrmStorWs",
          "MineDensWs","MineDensWsRp100",
@@ -128,7 +132,7 @@ benthic_oe_org$DATE_COL<-as.Date(benthic_oe_org$DATE_COL, format="%m/%d/%Y")
 benthic_oe_org$YEAR <-format(benthic_oe_org$DATE_COL,"%Y")
 benthic_oe <-benthic_oe_org%>%
   filter(YEAR==2018|YEAR==2019)%>%
-  select(c("SITE_ID","VISIT_NO","OE_SCORE")) #n=2105
+  select(c("UID","SITE_ID","VISIT_NO","OE_SCORE")) #n=2105
 
 #PHab O/E
 phab_oe <- phab_oe_org%>%
@@ -366,19 +370,20 @@ nrsa_strmcat_proc <-nrsa_strmcat_proc %>%
 
 
 nrsa1819<-nrsa_strmcat_proc%>%
-  select(c("SITE_ID","VISIT_NO","DATE_COL","YEAR","SITETYPE","STATE_NM","AG_ECO3","AG_ECO9","AG_ECO5",
+  select(c("UID","SITE_ID","VISIT_NO","DATE_COL","YEAR","SITETYPE","STATE_NM","AG_ECO3","AG_ECO9","AG_ECO5",
            "US_L3CODE","US_L4CODE",
            "LAT_DD83","LON_DD83","PROTOCOL","REALM","STRAH_ORD",
            "OE_SCORE",
-           "AMMONIA_N_RESULT","ANC_RESULT","CHLORIDE_RESULT","COLOR_RESULT","COND_RESULT","DOC_RESULT","MAGNESIUM_RESULT","SODIUM_RESULT",
-           "POTASSIUM_RESULT","NTL_RESULT","PTL_RESULT","SULFATE_RESULT","TSS_RESULT","TURB_RESULT",
+           "AMMONIA_N_RESULT","ANC_RESULT","CHLORIDE_RESULT","COLOR_RESULT","COND_RESULT","DOC_RESULT",
+           "MAGNESIUM_RESULT","SODIUM_RESULT","POTASSIUM_RESULT","NITRATE_N_RESULT","NITRITE_N_RESULT",
+           "NTL_RESULT","PTL_RESULT","SULFATE_RESULT","TSS_RESULT","TURB_RESULT",
            "RT_WQI","CL_pt","SO4_pt","PTL_pt","NTL_pt","TURB_pt","ENTERO_PT", "DO_PT","PH_PT","WQII",
            "H2O_dD","H2O_d18O","d.excess","MAST_SY","MSST_SY","MWST_SY",
            "LDCBF_G08",
            "XDEPTH_CM","SDDEPTH_CM","XWXD","RP100","XBKF_W","XBKF_H","XINC_H","SINU","REACHLEN",
            "LSUB_DMM","XEMBED","PCT_FN","PCT_SAFN","PCT_SFGF","LDMB_BW5","LRBS_BW5","LRBS_G08","PCT_FAST","PCT_SLOW",
            "RpRat","PCT_BDRK","XFC_ALG","XFC_AQM","XFC_LWD","XFC_NAT","V1W_MSQ","XCDENBK","XCDENMID",
-           "XCL","XGB","XC","XCMGW","QR1","QRVeg1","RDIST1","W1_HALL","W1H_WALL","W1_HNOAG","W1_HAG",
+           "XCL","XGB","XGW","XMW","XC","XCMGW","QR1","QRVeg1","RDIST1","W1_HALL","W1H_WALL","W1_HNOAG","W1_HAG",
            "W1H_CROP","XSLOPE_use","XWIDTH_use",
            "Lpt01_XCMGW","Lpt01_XFC_NAT","LRBS_use",
            "RDIST_COND","LRBS_Cond_use","LOE_RBS_use",
@@ -398,8 +403,10 @@ nrsa1819<-nrsa_strmcat_proc%>%
            "PCTSHRB_WsRp100", "PCTGRS_WsRp100", "PCTHAY_WsRp100", "PCTCROP_WsRp100",
            "PCTWDWET_WsRp100", "PCTHBWET_WsRp100", "PCTIMP_WS", "PCTIMP_WsRp100",
            "NABD_DensWs","NABD_NIDStorWs","NABD_NrmStorWs",
+           "RdDensWs","RdDensWsRp100",
+           "PopDen2010Ws","PopDen2010WsRp100",
            "AgKffactWs","FertWs","ManureWs","NPDESDensWs","NPDESDensWsRp100"))
-#n = 2110 (visits 1 & 2) with 178 variables
+#n = 2110 (visits 1 & 2) with 187 variables
 
 #"RPRAT","QRVEG1","MMI_BENT","OE_SCORE_OLD"
 

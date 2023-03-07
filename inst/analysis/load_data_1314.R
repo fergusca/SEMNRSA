@@ -10,7 +10,7 @@ library(dplyr)
 library(tidyr)
 
 library(devtools)
-devtools::load_all
+devtools::load_all("./") # Loads current directory
 library(SEMNRSA)
 
 # LOAD data stored in Rpackage - a .rda file
@@ -40,6 +40,9 @@ site_org$YEAR <-format(site_org$DATE_COL,"%Y")
 table(site_org$YEAR)
 # 2013 2014
 # 1018 1243
+# Remove UID - this may be old? - will replace with UID from benthic O/E dataset Karen B shared
+site_org<-site_org%>%
+  select(!UID)
 
 # Reduce datasets to merge together
 chem_vars <- c("SITE_ID","VISIT_NO",
@@ -82,7 +85,7 @@ phab <-phab_org%>%
            "RPMXDEP_CM","RPRAT","RPXDEP_CM",
            "PCT_BDRK",
            "XFC_ALG","XFC_AQM","XFC_LWD","XFC_BRS", "XFC_OHV","XFC_BIG","XFC_NAT","XFC_UCB","V1W_MSQ",
-           "XCDENBK","XCDENMID","XCL","XGB","XC","XCM","XCMGW","XPCAN","XPCM","XPCMG",
+           "XCDENBK","XCDENMID","XGB","XGW","XMW","XC","XCS","XCL","XCM","XCMGW","XPCAN","XPCM","XPCMG",
            "QR1","QRVEG1","RDIST1",
            "W1_HALL","W1H_WALL","W1H_LOG","W1_HNOAG","W1_HAG"))
 
@@ -90,6 +93,7 @@ strcat <-strcat_org%>%
   select("SITE_ID",
          "CatAreaSqKm","WsAreaSqKm","CatAreaSqKmRp100","WsAreaSqKmRp100",
          "HydrlCondWs","OMHWs",
+         "RdDensWs","RdDensWsRp100","RdDens_WS_PctFull","RdDens_RipBuf100_WS_PctFullRp100",
          "DamDensWs","DamNIDStorWs","DamNrmStorWs",
          "NABD_DensWs","NABD_NIDStorWs","NABD_NrmStorWs",
          "MineDensWs","MineDensWsRp100",
@@ -132,7 +136,7 @@ benthic_oe_org$DATE_COL<-as.Date(benthic_oe_org$DATE_COL, format="%m/%d/%Y")
 benthic_oe_org$YEAR <-format(benthic_oe_org$DATE_COL,"%Y")
 benthic_oe <-benthic_oe_org%>%
   filter(YEAR==2013|YEAR==2014)%>%
-  select(c("SITE_ID","VISIT_NO","OE_SCORE"))
+  select(c("UID","SITE_ID","VISIT_NO","OE_SCORE"))
 
 #PHab O/E
 phab_oe <- phab_oe_org%>%
@@ -375,21 +379,21 @@ nrsa_strmcat_proc <-nrsa_strmcat_proc %>%
             PctWdWet2013_WsRp100, PctHbWet2013_WsRp100, PctImp2013Ws,
             PctImp2013_RipBuf100WsRp100))
 
-
+# SUBSET OF VARIABLES TO MERGE WITH OTHER SURVEYS
 nrsa1314<-nrsa_strmcat_proc%>%
-  select(c("SITE_ID","VISIT_NO","DATE_COL","YEAR", "SITETYPE","STATE","AG_ECO3","AG_ECO9","AG_ECO5",
+  select(c("UID","SITE_ID","VISIT_NO","DATE_COL","YEAR", "SITETYPE","STATE","AG_ECO3","AG_ECO9","AG_ECO5",
            "US_L3CODE","US_L4CODE",
            "LAT_DD83","LON_DD83","PROTOCOL","REALM","STRAH_ORD",
            "MMI_BENT","OE_SCORE_OLD","OE_SCORE",
            "AMMONIA_N_RESULT","ANC_RESULT","CHLORIDE_RESULT","COLOR_RESULT","COND_RESULT","DOC_RESULT","MAGNESIUM_RESULT","SODIUM_RESULT",
-           "POTASSIUM_RESULT","NTL_RESULT","PTL_RESULT","SULFATE_RESULT","TSS_RESULT","TURB_RESULT",
+           "POTASSIUM_RESULT","NITRATE_N_RESULT","NITRITE_N_RESULT","NTL_RESULT","PTL_RESULT","SULFATE_RESULT","TSS_RESULT","TURB_RESULT",
            "RT_WQI","CL_pt","SO4_pt","PTL_pt","NTL_pt","TURB_pt","ENTERO_PT", "DO_PT","PH_PT","WQII",
            "H2O_dD","H2O_d18O","d.excess","MAST_SY","MSST_SY","MWST_SY",
            "LDCBF_G08",
            "XDEPTH_CM","SDDEPTH_CM","XWXD","RP100","XBKF_W","XBKF_H","XINC_H","SINU","REACHLEN",
            "LSUB_DMM","XEMBED","PCT_FN","PCT_SAFN","PCT_SFGF","LDMB_BW5","LRBS_BW5","LRBS_G08","PCT_FAST","PCT_SLOW",
            "RPRAT","PCT_BDRK","XFC_ALG","XFC_AQM","XFC_LWD","XFC_NAT","V1W_MSQ","XCDENBK","XCDENMID",
-           "XCL","XGB","XC","XCMGW","QR1","QRVEG1","RDIST1","W1_HALL","W1H_WALL","W1_HNOAG","W1_HAG",
+           "XCL","XGB","XGW","XMW","XC","XCMGW","QR1","QRVEG1","RDIST1","W1_HALL","W1H_WALL","W1_HNOAG","W1_HAG",
            "W1H_CROP","XSLOPE_use","XWIDTH_use",
            "Lpt01_XCMGW","Lpt01_XFC_NAT","LRBS_use",
            "RDIST_COND","LRBS_Cond_use","LOE_RBS_use",
@@ -409,8 +413,10 @@ nrsa1314<-nrsa_strmcat_proc%>%
            "PCTSHRB_WsRp100", "PCTGRS_WsRp100", "PCTHAY_WsRp100", "PCTCROP_WsRp100",
            "PCTWDWET_WsRp100", "PCTHBWET_WsRp100", "PCTIMP_WS", "PCTIMP_WsRp100",
            "NABD_DensWs","NABD_NIDStorWs","NABD_NrmStorWs",
+           "RdDensWs","RdDensWsRp100",
+           "PopDen2010Ws","PopDen2010WsRp100",
            "AgKffactWs","FertWs","ManureWs","NPDESDensWs","NPDESDensWsRp100"))
-#n = 2261 (visits 1 & 2) with 180 variables
+#n = 2261 (visits 1 & 2) with 187 variables
 
 #######################
 #GET COLUMN NAMES TO CHECK

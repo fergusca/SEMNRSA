@@ -7,6 +7,9 @@
 ## 3/16/2022
 ## 5/26/2022 - added PHDI
 ## 6/24/2022 - Added Omernik level III and IV ecoregion codes
+## 9/2/2022 - Added Rd density & human population
+## 9/6/2022 - Added O and E
+## 2/6/2023 - Added riparian understory and groundcover (XMW, XGW, XGB)
 ###########
 
 rm(list=ls())
@@ -22,7 +25,7 @@ library(ggpubr) # statistics for comparison
 library(reshape2)
 
 ###############
-## READ PROCESSED NRSA-STREAMCAT DATA
+## READ PROCESSED NRSA-STREAMCAT DATA - vars = 185 or 182
 ##  Processed data are in the R project (C:drive)
 # NRSA 2008-09 n = 2303
 nrsa0809 <- read.csv("data_processed/nrsa0809/nrsa0809_to_merge.csv")
@@ -60,19 +63,19 @@ nrsa1819<-nrsa1819%>%
 
 # REORDER NRSA1819 variables
 nrsa1819<-nrsa1819%>%
-  select(c("SITE_ID","VISIT_NO","DATE_COL","YEAR","SITETYPE","STATE","AG_ECO3","AG_ECO9","AG_ECO5",
+  select(c("UID","SITE_ID","VISIT_NO","DATE_COL","YEAR","SITETYPE","STATE","AG_ECO3","AG_ECO9","AG_ECO5",
            "US_L3CODE","US_L4CODE",
            "LAT_DD83","LON_DD83","PROTOCOL","REALM",#"STRAH_ORD",
            "OE_SCORE",
            "AMMONIA_N_RESULT","ANC_RESULT","CHLORIDE_RESULT","COLOR_RESULT","COND_RESULT","DOC_RESULT","MAGNESIUM_RESULT","SODIUM_RESULT",
-           "POTASSIUM_RESULT","NTL_RESULT","PTL_RESULT","SULFATE_RESULT","TSS_RESULT","TURB_RESULT",
+           "POTASSIUM_RESULT","NITRATE_N_RESULT","NITRITE_N_RESULT","NTL_RESULT","PTL_RESULT","SULFATE_RESULT","TSS_RESULT","TURB_RESULT",
            "RT_WQI","CL_pt","SO4_pt","PTL_pt","NTL_pt","TURB_pt","ENTERO_PT", "DO_PT","PH_PT","WQII",
            "H2O_dD","H2O_d18O","d.excess","MAST_SY","MSST_SY","MWST_SY",
            "LDCBF_G08",
            "XDEPTH_CM","SDDEPTH_CM","XWXD","RP100","XBKF_W","XBKF_H","XINC_H","SINU","REACHLEN",
            "LSUB_DMM","XEMBED","PCT_FN","PCT_SAFN","PCT_SFGF","LDMB_BW5","LRBS_BW5","LRBS_G08","PCT_FAST","PCT_SLOW",
            "RpRat","PCT_BDRK","XFC_ALG","XFC_AQM","XFC_LWD","XFC_NAT","V1W_MSQ","XCDENBK","XCDENMID",
-           "XCL","XGB","XC","XCMGW","QR1","QRVeg1","RDIST1","W1_HALL","W1H_WALL","W1_HNOAG","W1_HAG",
+           "XCL","XGB","XGW","XMW","XC","XCMGW","QR1","QRVeg1","RDIST1","W1_HALL","W1H_WALL","W1_HNOAG","W1_HAG",
            "W1H_CROP","XSLOPE_use","XWIDTH_use",
            "Lpt01_XCMGW","Lpt01_XFC_NAT","LRBS_use",
            "RDIST_COND","LRBS_Cond_use","LOE_RBS_use",
@@ -92,6 +95,8 @@ nrsa1819<-nrsa1819%>%
            "PCTSHRB_WsRp100", "PCTGRS_WsRp100", "PCTHAY_WsRp100", "PCTCROP_WsRp100",
            "PCTWDWET_WsRp100", "PCTHBWET_WsRp100", "PCTIMP_WS", "PCTIMP_WsRp100",
            "NABD_DensWs","NABD_NIDStorWs","NABD_NrmStorWs",
+           "RdDensWs","RdDensWsRp100",
+           "PopDen2010Ws","PopDen2010WsRp100",
            "AgKffactWs","FertWs","ManureWs","NPDESDensWs","NPDESDensWsRp100"))
 
 names(nrsa1819) # dropped "XWIDTH",
@@ -126,10 +131,15 @@ nrsa0809$LDCBF_G08 <- as.numeric(nrsa0809$LDCBF_G08)
 str(nrsa0809$LDCBF_G08)
 head(nrsa0809$LDCBF_G08)
 
-## THREE DATASETS HAVE 177 variables in matching order
+# Nitrite has scientific notation (7.0e-04) so values are treated as character
+nrsa1819$NITRITE_N_RESULT<-as.numeric(nrsa1819$NITRITE_N_RESULT)
+head(nrsa1819$NITRITE_N_RESULT)
+str(nrsa1819$NITRITE_N_RESULT)
+
+## THREE DATASETS HAVE 186 variables in matching order
 
 ########################
-## COMBINE DATASETS
+## COMBINE DATASETS - n =6674 obs with 187 vars
 all_dat<-bind_rows(nrsa0809=nrsa0809, nrsa1314=nrsa1314, nrsa1819=nrsa1819,
                 .id="nrsa_survey")
 table(all_dat$nrsa_survey)
@@ -277,10 +287,26 @@ nrsa1819_resamp<- all_dat_id %>%
 
 ###################
 ## BRING DATASETS TOGETHER n = 6674
-all_dat_resample<-bind_rows(nrsa0809_only,nrsa0809_resamp,nrsa1314_only,nrsa1314_resamp,nrsa1819_only,nrsa1819_resamp)
-table(all_dat_resample$RESAMPLE)
+all_dat_re<-bind_rows(nrsa0809_only,nrsa0809_resamp,nrsa1314_only,nrsa1314_resamp,nrsa1819_only,nrsa1819_resamp)
+table(all_dat_re$RESAMPLE)
 #NRSA0809  NRSA1314  NRSA1819 RESAMPLED
 # 1420       803       992      3459
+
+
+######################
+## MASTER LIST OF NRSA SITES AND RT_MASTER designation (Email from Darin 10/28/22)
+#   n=8640 from 2000-2019
+ref_nrsa<-read.csv("C:/Users/EFergus/OneDrive - Environmental Protection Agency (EPA)/a_NLA_OE_project/Data/NRSA_site_R_T/sample.info_12022021.csv")
+
+ref_nrsa<-ref_nrsa%>%
+  select(SITE_ID,YEAR,VISIT_NO,DOY,RT_MASTER)
+
+### Merge with processed NRSA data n=4371
+all_dat_resample<-left_join(all_dat_re,ref_nrsa,by=c("SITE_ID","VISIT_NO","YEAR"))
+table(all_dat_resample$RT_MASTER)
+# ?    B    R    S    T
+# 35  156  869 3567 1983
+table(all_dat_resample$RT_WQI)
 
 
 ###############
@@ -319,14 +345,25 @@ summary(all_dat_resample$LDCBF_G08)
 #   Min. 1st Qu.  Median    Mean 3rd Qu.    Max.    NA's
 #-3.4231  0.6542  1.1209  1.0704  1.5707  4.2508     370
 
+#############
+# CREATE "Specific Stream Power" - suggestion by Phil (abstact comment 10/27/22)
+#  Slope*depth = index of stream power
+#  Slope*depth/width = Specific Stream Power - close to shear stress
+all_dat_resample<- all_dat_resample%>%
+  mutate(sp_strm_pwr = (XSLOPE_use+0.01)*(XDEPTH_CM/100)/(XWIDTH_use)) # convert depth (cm) to m
+summary(all_dat_resample$sp_strm_pwr)
+
 #####################
 ## TRANSFORM CHEMISTRY VARIABLES FOR MODEL
 # one observation has PTL_RESULT = -2 (SITE_ID = NRS18_OK_11082)
 all_dat_resample <- all_dat_resample%>%
-  mutate(L_PTL = log10(PTL_RESULT+0.01),
+  mutate(L_NO3 = log10(NITRATE_N_RESULT+0.001),
+         L_NO2 = log10(NITRITE_N_RESULT+0.00001),
+         L_PTL = log10(PTL_RESULT+0.01),
          L_NTL = log10(NTL_RESULT+0.01),
          L_CHLR = log10(CHLORIDE_RESULT),
          L_SULF = log10(SULFATE_RESULT),
+         L_TSS = log10(TSS_RESULT+0.01),
          L_TURB = log10(TURB_RESULT),
          L_SODIUM = log10(SODIUM_RESULT))
 
@@ -340,9 +377,12 @@ all_dat_resample <-all_dat_resample%>%
          PCTAGR_WsRp100 = PCTHAY_WsRp100+PCTCROP_WsRp100,
          PCTURB_WsRp100 = PCTURBOP_WsRp100+PCTURBLO_WsRp100+PCTURBMD_WsRp100+PCTURBHI_WsRp100,
          PCTWET_WsRp100 = PCTHBWET_WsRp100+PCTWDWET_WsRp100,
-         PCTFOR_WsRp100 = PCTMXFST_WsRp100+PCTCONIF_WsRp100+PCTDECID_WsRp100)
+         PCTFOR_WsRp100 = PCTMXFST_WsRp100+PCTCONIF_WsRp100+PCTDECID_WsRp100,
+         PCTNATTERR_WsRp100 = PCTDECID_WsRp100 + PCTCONIF_WsRp100 + PCTMXFST_WsRp100 + PCTSHRB_WsRp100 + PCTGRS_WsRp100,
+         PCTNAT_WsRp100 = PCTNATTERR_WsRp100 + PCTWET_WsRp100)
 summary(all_dat_resample$PCTURB_WsRp100)
 summary(all_dat_resample$PCTWET_WsRp100)
+
 
 ####################
 # CONVERT NABD_STORAGE FROM m3/sqkm to m3/m2
@@ -355,25 +395,41 @@ all_dat_resample <- all_dat_resample %>%
          NABD_NIDStorWs_ratio = NABD_NIDStorWs_m/RunoffWs_m,
          NABD_NrmStorWs_ratio = NABD_NrmStorWs_m/RunoffWs_m)
 
-# TRANSFORM LANDUSE CLASSES
+# TRANSFORM LANDUSE CLASSES - Added natural riparian cover classes (terrestrial and all (forest, shrub, grass, wetland))
 all_dat_resample <- all_dat_resample%>%
   mutate(L_NABD_NrmStorWs_ratio = log10(NABD_NrmStorWs_ratio+0.001),
          asin_PCTAGR_WS = asin(sqrt(PCTAGR_WS/100)),
          asin_PCTURB_WS = asin(sqrt(PCTURB_WS/100)),
          asin_PCTWET_WS = asin(sqrt(PCTWDWET_WS/100)),
          asin_PCTFOR_WS = asin(sqrt(PCTFOR_WS/100)),
-         asin_PCTFOR_WsRp100 = asin(sqrt(PCTFOR_WsRp100/100)),
+         PCTFOR_WsRp100_mod = floor(PCTFOR_WsRp100),
+         asin_PCTFOR_WsRp100 = asin(sqrt(PCTFOR_WsRp100_mod/100)),
          asin_PCTWET_WsRp100 = asin(sqrt(PCTWET_WsRp100/100)),
          asin_PCTAGR_WsRp100 = asin(sqrt(PCTAGR_WsRp100/100)),
-         asin_PCTURB_WsRp100 = asin(sqrt(PCTURB_WsRp100/100)))
+         PCTURB_WsRp100_mod = floor(PCTURB_WsRp100),
+         asin_PCTURB_WsRp100 = asin(sqrt(PCTURB_WsRp100_mod/100)),
+         PCTNATTERR_WsRp100_mod=floor(PCTNATTERR_WsRp100),
+         asin_PCTNATTERR_WsRp100 = asin(sqrt(PCTNATTERR_WsRp100_mod/100)),
+         PCTNAT_WsRp100_mod = floor(PCTNAT_WsRp100),
+         asin_PCTNAT_WsRp100 = asin(sqrt(PCTNAT_WsRp100_mod/100)))
 
 # STREAM MORPH TRANSFORMATIONS
 all_dat_resample <-all_dat_resample %>%
   mutate(L_XWIDTH_use = log10(XWIDTH_use),
          L_XWXD = log10(XWXD+0.01),
          L_SLOPE = log10(XSLOPE_use+0.01),
-         L_SLOPE_DPTH = log10((XSLOPE_use+0.01)*XDEPTH_CM))
+         L_SLOPE_DPTH = log10((XSLOPE_use+0.01)*XDEPTH_CM),
+         L_STRM_POWER = log10(sp_strm_pwr))
 summary(all_dat_resample$L_SLOPE_DPTH)
+summary(all_dat_resample$L_STRM_POWER)
+
+# TRANSFORM RD DENSITY
+all_dat_resample<-all_dat_resample%>%
+  mutate(L_RdDensWs=log10(RdDensWs+0.1),
+         L_RdDensWsRp100=log10(RdDensWsRp100+0.1))
+summary(all_dat_resample$L_RdDensWs)
+#     Min.   1st Qu.    Median      Mean   3rd Qu.      Max.
+#-1.000000  0.003969  0.171966  0.138623  0.295188  1.183338
 
 #################
 # 5/4/2022
@@ -478,13 +534,112 @@ table(all_dat_resample3$ECO_L3_4_mod)
 #XE-EPLAT   XE-NORTH   XE-SOUTH
 #249        161        183
 
+######################
+## ADD INDIVIDUAL O and E values 9/6/2022 and 11/2/2022
+## NRSA CROSSWALK UID
+uid<-read.csv("C:/Users/EFergus/OneDrive - Environmental Protection Agency (EPA)/a_NLA_OE_project/Data/O_E_components/NRSA_UID_Crosswalk.csv")
+
+# DATASETS WITH O and E components - Need to crosswalk old UID with updated UIDs for the 0809 and 1314 datasets
+## NRSA O & E 0809
+#    note there are many observations with old UIDs that start with 500 that are not part of the NRSA survey but have bug information
+oe_0809<-read.csv("C:/Users/EFergus/OneDrive - Environmental Protection Agency (EPA)/a_NLA_OE_project/Data/O_E_components/all.sites.OE.scores.cal-val-test.csv")
+# Rename UID column to indicate old version
+oe_0809 <- oe_0809%>%
+  rename("old_UID"="UID")
+
+## NRSA O & E 1314
+oe_1314<-read.csv("C:/Users/EFergus/OneDrive - Environmental Protection Agency (EPA)/a_NLA_OE_project/Data/O_E_components/new.sites.OE.scores.csv")
+# Rename first column to be UID
+oe_1314<-oe_1314%>%
+  rename("old_UID"="X")
+names(oe_1314)
+
+##################
+## PROCESS O and E 0809 and 1314 data - MERGE with crosswalk dataset - "old_UID" = "SOURCE_ID"
+oe_0809_proc<-left_join(oe_0809, uid, by=c("old_UID"="SOURCE_ID")) #n = 4190 from 3794 bc there are several observations without updated UID
+summary(oe_0809_proc$O)
+#Min. 1st Qu.  Median    Mean 3rd Qu.    Max.
+#0.00    7.00   10.00   10.61   14.00   30.00
+summary(oe_0809_proc$DESTINATION_ID)
+#Min. 1st Qu.  Median    Mean 3rd Qu.    Max.    NA's
+#   1317   12269   14332  182936   15475 1003381    1704
+table(oe_0809_proc$SOURCE_STUDYNAME)
+#NRSA0809 NRSA1314
+#2060      426
+
+# RENAME DESTINATION ID to UID
+oe_0809_proc<- oe_0809_proc%>%
+  rename("UID"="DESTINATION_ID")%>%
+  select(!c(X, GROUP, ECO3,nUID,old_UID,SOURCE_STUDYNAME,DESTINATION_STUDYNAME))
+names(oe_0809_proc)
+
+# Join 1314 O & E with crosswalk table
+oe_1314_proc<-left_join(oe_1314,uid,by=c("old_UID"="SOURCE_ID")) #n = 2667 from 2254
+summary(oe_1314_proc$O)
+summary(oe_1314_proc$DESTINATION_ID)
+table(oe_1314_proc$SOURCE_STUDYNAME)
+#NRSA0809 NRSA1314 NRSA1819
+#336     2254       77
+length(unique(oe_1314_proc$DESTINATION_ID)) #n = 2667
+
+# RENAME DESTINATION ID to UID
+oe_1314_proc<- oe_1314_proc%>%
+  rename("UID"="DESTINATION_ID")%>%
+  select(!c(old_UID,SOURCE_STUDYNAME,DESTINATION_STUDYNAME))
+names(oe_1314_proc)
+
+##############
+## NRSA O & E 1819 - don't need to update UID bc Karen did
+oe_1819<-read.csv("C:/Users/EFergus/OneDrive - Environmental Protection Agency (EPA)/a_NLA_OE_project/Data/O_E_components/NRSA1819_OE_scores_updUIDs.csv")
+
+
+################
+## SUBSET PROCESSED NRSA DATASET BY SURVEY YEAR TO MERGE INDIVIDUALLY WITH data with O & E
+nrsa0809<- all_dat_resample3%>%
+  filter(nrsa_survey=="nrsa0809")
+nrsa1314<-all_dat_resample3%>%
+  filter(nrsa_survey=="nrsa1314")
+nrsa1819<-all_dat_resample3%>%
+  filter(nrsa_survey=="nrsa1819")
+
+# MERGE processed data with O and E based on UID
+# NRSA 0809 n = 22303
+nrsa_oe_0809<-left_join(nrsa0809,oe_0809_proc, by=c("UID"="UID"))#n=97671
+length(unique(nrsa_oe_0809$UID))# 2248
+#head(nrsa_oe_0809)
+summary(nrsa_oe_0809$E)
+#Min. 1st Qu.  Median    Mean 3rd Qu.    Max.    NA's
+#4.267  10.157  12.932  13.012  15.045  25.793     199
+# Not sure why so many duplicates
+dup0809<-nrsa_oe_0809%>%
+  filter(duplicated(UID)) #n=95423
+
+# Drop duplicate obs n = 2303 based on SITE_ID and VISIT_NO
+nrsa_oe_0809<-nrsa_oe_0809%>%
+  distinct(SITE_ID,VISIT_NO,YEAR, .keep_all = T)
+
+############
+# NRSA 1314 n = 2261
+nrsa_oe_1314<- left_join(nrsa1314, oe_1314_proc, by=c("UID"="UID")) #n=2261
+length(unique(nrsa_oe_1314$UID))#n=2256
+table(nrsa_oe_1314$SOURCE_STUDYNAME)
+
+################
+## NRSA 1819 n=2110
+nrsa_oe_1819<- left_join(nrsa1819, oe_1819, by=c("UID"="UID")) #n= 2110
+
+## COMPILE THREE SURVEYS TOGETHER n=6674
+nrsa_oe_all<-bind_rows(nrsa_oe_0809,nrsa_oe_1314,nrsa_oe_1819)
+
+
 #################
 ## EXPORT CSV OF COMPILED DATA - ALL OBSERVATIONS, ALL SURVEYS VISITS 1 & 2
-write.csv(all_dat_resample3,"data_processed/Compiled/NRSA_081318_all.csv", row.names=FALSE)
+write.csv(nrsa_oe_all,"data_processed/Compiled/NRSA_081318_all_O_E.csv", row.names=FALSE)
 
 #COLUMN NAMES
-dat_names<-data.frame(colnames(all_dat_resample3))
-write.csv(dat_names,"data_processed/Compiled/column_vars.csv",row.names = FALSE)
+dat_names<-data.frame(colnames(nrsa_oe_all))
+write.csv(dat_names,"data_processed/Compiled/column_vars_O_E.csv",row.names = FALSE)
+
 
 
 ####################
@@ -494,19 +649,19 @@ write.csv(dat_names,"data_processed/Compiled/column_vars.csv",row.names = FALSE)
 #  INCLUDES VISIT 1 & 2
 
 # NRSA0809 n = 2303
-nrsa0809_subset<- all_dat_resample3%>%
+nrsa0809_subset<- nrsa_oe_all%>%
   filter(nrsa_survey=="nrsa0809")
 
 # SUBSET NRSA1314 data by dropping observations with same UNIQUE_ID as NRSA0809
 # n = 1283 out of 2069
-nrsa1314_subset<-all_dat_resample3%>%
+nrsa1314_subset<-nrsa_oe_all%>%
   filter(nrsa_survey=="nrsa1314")%>%
   filter(!UNIQUE_ID %in%siteid_0809)
 
 # SUBSET NRSA1819 by dropping sites sampled in 0809 and/or 1314
 # 1560 - after dropping NRSA0809 duplicates
 # 992 obs - after dropping NRSA1314 duplicates
-nrsa1819_subset <- all_dat_resample3 %>%
+nrsa1819_subset <- nrsa_oe_all%>%
   filter(nrsa_survey=="nrsa1819")%>%
   filter(!UNIQUE_ID %in% siteid_0809) %>%
   filter(!UNIQUE_ID %in% siteid_1314)
@@ -514,7 +669,7 @@ nrsa1819_subset <- all_dat_resample3 %>%
 ###################
 ## BRING SUBSETS TOGETHER
 nrsa_all<-bind_rows(nrsa0809_subset,nrsa1314_subset,nrsa1819_subset)
-# n = 4578 w/205 vars
+# n = 4578 w/262 vars
 
 table(nrsa_all$nrsa_survey,nrsa_all$VISIT_NO)
 #              1    2
@@ -545,23 +700,26 @@ table(nrsa_all_visit1$nrsa_survey,nrsa_all_visit1$YEAR)
 ## WRITE DATASETS
 
 # NRSA 08-19 All 0809 sites and only new sites from subsequent surveys
-#   INCLUDES VISIT 1 & 2
+#   INCLUDES VISIT 1 & 2 n = 4578
 write.csv(nrsa_all,"data_processed/Compiled/nrsa081318_nonresampled_VISIT_12.csv",row.names = FALSE)
 
 
 # NRSA 08-19 All 0809 sites and only new sites from subsequent surveys
-#   ONLY VISIT 1
+#   ONLY VISIT 1 n = 4389
 write.csv(nrsa_all_visit1,"data_processed/Compiled/nrsa081318_nonresampled_VISIT_1_ONLY.csv",row.names = FALSE)
 
 
 
 ##############
 ## FOR MAP - SELECT DISTINCT UNIQUE_IDS n = 4390
-all_dat_unique= all_dat_resample3%>%
+all_dat_unique= nrsa_all%>%
   distinct(UNIQUE_ID, .keep_all=TRUE)
 
 # EXPORT csv for map
 write.csv(all_dat_unique,"data_processed/Compiled/nrsa081318_for_map.csv", row.names = FALSE)
+
+
+
 
 
 
