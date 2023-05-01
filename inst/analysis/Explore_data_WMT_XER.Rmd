@@ -23,10 +23,21 @@ library(tidyr)
 library(kableExtra)
 library(knitr)
 library(stringr)
+library(psych) # for summary stats table
+library(data.table)
 
-library(devtools)
-devtools::load_all()
-library(SEMNRSA)
+library(gridExtra)
+
+# Multivariate normality - Mardia Test (Skewness and kurtosis)
+#install.packages("mvnormalTest")
+library(mvnormalTest)
+
+#install.packages("stargazer")
+#library(stargazer)
+
+#library(devtools)
+#devtools::load_all()
+#library(SEMNRSA)
 
 ##########
 ## READ PROCESSED DATA
@@ -55,6 +66,9 @@ dat_proc<- dat_proc%>%
 # DROP NOPHAB class from REALM
 dat_proc$PROTOCOL<-droplevels(dat_proc$PROTOCOL)
 
+# Scaled specific stream power
+dat_proc<- dat_proc%>%
+  mutate(sp_strm_pwr_sc = sp_strm_pwr/100)
 #########################
 ## SUBSET BY AGGREGATED 9- ECOREGION
 
@@ -98,10 +112,321 @@ xer_b <-xer %>%
   filter(PROTOCOL=="BOATABLE")
 ```
 
+## Summary statistics
+# using stargazer https://www.jakeruss.com/cheatsheets/stargazer/#the-default-summary-statistics-table
+```{r, echo=FALSE}
+wmt_sum<- wmt_w%>%
+  select(PSUMPY_SY_WS,drought_mean,PCTAGR_WS,PCTURB_WS,NABD_NrmStorWs_ratio,
+         sp_strm_pwr,sp_strm_pwr_sc,  QLow_kmcl,Qbkf_kmcl,evap_index,PCTNATTERR_WsRp100_mod,PCTWET_WsRp100,
+         W1_HAG,W1_HNOAG,XCMGW,LRBS_use,NTL_RESULT,SULFATE_RESULT,
+         OE_SCORE,MMI_BENT,EPT_RICH)#%>%
+  #summarise(across(where(is.numeric),.fns =
+  #                   list(Median = median, Mean = mean, SD = sd,
+  #                        Min = min,
+  #                        Max = max),na.rm=T))%>%
+  #gather
+  #pivot_longer(cols=everything(),
+  #             names_to=c("colNames",".value"),names_sep="_")
+  #pivot_longer(everything(),names_sep = "_", names_to = c("variable",".value"))
+#  summarize_all(.funs=c(mean="mean",sd="sd"),na.rm=T)
+
+#https://rpubs.com/stephenmoore56/136318
+library(psych)
+kable(describe(wmt_sum),
+      format="markdown",
+      caption="WMT w",
+      digits=3)
+#kable(summary(wmt_sum)) # no SD
+
+#stargazer(wmt_sum,type="html") # Not working - just showing formatting lines
+
+
+```
+
+# Summary stats XERIC wadeable
+```{r, echo=FALSE}
+xer_sum<- xer_w%>%
+  select(PSUMPY_SY_WS,drought_mean,PCTAGR_WS,PCTURB_WS,NABD_NrmStorWs_ratio,
+         sp_strm_pwr,sp_strm_pwr_sc,QLow_kmcl,Qbkf_kmcl,evap_index, PCTNATTERR_WsRp100_mod,PCTWET_WsRp100,
+         W1_HAG,W1_HNOAG,XCMGW,LRBS_use,NTL_RESULT,SULFATE_RESULT,
+         OE_SCORE,MMI_BENT,EPT_RICH)#%>%
+
+#https://rpubs.com/stephenmoore56/136318
+kable(describe(xer_sum),
+      format="markdown",
+      caption="XER w",
+      digits=3)
+
+```
+
+# CHECKING FOR NORMALITY - normality among individual variables and mutivariate normality - reference Leitao et al. 2018
+
+```{r, echo=FALSE}
+# Madria Test (Skewness and Kurtosis for multivariate normality)
+# Both p-values of skewness and kurtosis statistics should be > 0.05 to conclude multivariate normality - from https://search.r-project.org/CRAN/refmans/mvnormalTest/html/mardia.html
+
+# Use subseted data that includes variables in model
+# WMT wadeable non-transformed variables
+mardia(wmt_sum) # Getting an error which may mean that there is multicolinearity
+# Dataset of transformed and scaled variables
+wmt_tr<- wmt_w%>%
+  select(asin_PCTAGR_WS,asin_PCTURB_WS,L_NABD_NrmStorWs_ratio, W1_HAG,W1_HNOAG, PSUMPY_SY_WS, drought_mean, L_STRM_POWER, LQLow_kmcl,LQbkf_kmcl,asin_PCTNATTERR_WsRp100, asin_PCTWET_WsRp100,Lpt01_XCMGW,L_NTL, L_SULF,L_CHLR, L_TURB)
+
+mardia(wmt_tr)# Several variables are not normally distributed even after transforming. And not meeting multivariate normality
+
+# XER wadeable
+mardia(xer_sum)#  multicolinearity in untransformed variables
+# XER with transformed variables
+xer_tr<- xer_w%>%
+  select(asin_PCTAGR_WS,asin_PCTURB_WS,L_NABD_NrmStorWs_ratio, W1_HAG,W1_HNOAG, PSUMPY_SY_WS, drought_mean, L_STRM_POWER, LQLow_kmcl,LQbkf_kmcl,asin_PCTNATTERR_WsRp100, asin_PCTWET_WsRp100,Lpt01_XCMGW,L_NTL, L_SULF,L_CHLR, L_TURB)
+
+mardia(xer_tr)
+
+```
+
+
+## BOXPLOT OF MACROINVERTEBRATE INDICES
+```{r, echo=FALSE,}
+# SET FONT
+windowsFonts(AR=windowsFont("Arial"))
+
+# Make dataset of wadeable WMT and XER
+wmt_xer<-dat_proc%>%
+  filter(AG_ECO9=="WMT"|AG_ECO9=="XER")%>%
+  filter(PROTOCOL=="WADEABLE")
+
+# T-tests
+library(ggpubr) # to print group mean test on graph
+bx_oe<-ggplot(wmt_xer, aes(x=AG_ECO9, y = OE_SCORE)) + geom_boxplot() +
+  stat_compare_means(method="t.test") +
+  theme_bw(base_size=12)+
+  theme(plot.title = element_text(family = "AR",face="plain",size=14, hjust=0.5),
+        axis.text.x = element_blank(),
+        axis.text.y = element_text(family = "AR", size=12),
+        axis.title.x = element_blank(),#
+        axis.title.y = element_text(family="AR"), #element_blank(),#
+        strip.text.x = element_blank(),
+        panel.grid.major =  element_line(colour = NA),
+        panel.grid.minor=element_line(colour = NA)) +
+  ggtitle("OE")
+
+bx_oe
+# parametric t-test two group mean test https://rpubs.com/raysunau/compare_means
+t.test(OE_SCORE~AG_ECO9, data=wmt_xer)
+
+bx_mmi<-ggplot(wmt_xer, aes(x=AG_ECO9, y = MMI_BENT)) + geom_boxplot()+
+  stat_compare_means(method="t.test") +
+  theme_bw(base_size=12)+
+  theme(plot.title = element_text(family = "AR",face="plain",size=14, hjust=0.5),
+        axis.text.x = element_blank(),
+        axis.text.y = element_text(family = "AR", size=12),
+        axis.title.x = element_blank(),#
+        axis.title.y = element_text(family="AR"), #element_blank(),#
+        strip.text.x = element_blank(),
+        panel.grid.major =  element_line(colour = NA),
+        panel.grid.minor=element_line(colour = NA)) +
+  ggtitle("MMI")
+
+bx_mmi
+
+#compare_means(MMI_BENT~AG_ECO9, data=wmt_xer, method="t.test")
+#wmt_xer_mod<-wmt_xer%>%
+#  filter(!is.na(MMI_BENT))
+#wilcox.test(MMI_BENT~AG_ECO9, data=wmt_xer_mod)
+t.test(MMI_BENT~AG_ECO9, data=wmt_xer)
+
+bx_ept<-ggplot(wmt_xer, aes(x=AG_ECO9, y = EPT_RICH)) + geom_boxplot()+
+  stat_compare_means(method="t.test") +
+  theme_bw(base_size=12)+
+  theme(plot.title = element_text(family = "AR",face="plain",size=14, hjust=0.5),
+        axis.text.x = element_text(family="AR"),
+        axis.text.y = element_text(family = "AR", size=12),
+        axis.title.x = element_blank(),#
+        axis.title.y = element_text(family="AR"), #element_blank(),#
+        strip.text.x = element_blank(),
+        panel.grid.major =  element_line(colour = NA),
+        panel.grid.minor=element_line(colour = NA)) +
+  ggtitle("EPT")
+
+bx_ept
+t.test(EPT_RICH~AG_ECO9, data=wmt_xer)
+
+# Relative bed stability
+bx_rbs<-ggplot(wmt_xer, aes(x=AG_ECO9, y = LRBS_use)) + geom_boxplot()+
+  stat_compare_means(method="t.test")
+bx_rbs
+t.test(LRBS_use~AG_ECO9, data=wmt_xer)
+
+# Sulfate
+bx_so4<-ggplot(wmt_xer, aes(x=AG_ECO9, y = SULFATE_RESULT)) + geom_boxplot()+
+  stat_compare_means(method="t.test")
+bx_so4
+t.test(SULFATE_RESULT~AG_ECO9, data=wmt_xer)
+
+
+## URBAN DEVELOPMENT WMT VS XER
+bx_nohag<-ggplot(wmt_xer, aes(x=AG_ECO9, y = W1_HNOAG)) + geom_boxplot()+
+  stat_compare_means(method="t.test") +
+  theme_bw(base_size=12)+
+  theme(plot.title = element_text(family = "AR",face="plain",size=14, hjust=0.5),
+        axis.text.x = element_text(family="AR"),
+        axis.text.y = element_text(family = "AR", size=12),
+        axis.title.x = element_blank(),#
+        axis.title.y = element_text(family="AR"), #element_blank(),#
+        strip.text.x = element_blank(),
+        panel.grid.major =  element_line(colour = NA),
+        panel.grid.minor=element_line(colour = NA)) +
+  ggtitle("Non-agr disturbance")
+
+bx_nohag
+t.test(W1_HNOAG~AG_ECO9, data=wmt_xer)
+# WELCH Two Sample t-test
+#t = -2.0788, df = 545.97, p-value = 0.0381
+#alternative hypothesis: true difference in means between group WMT and group XER #is not equal to 0
+#95 percent confidence interval:
+# -0.225590437 -0.006389167
+#sample estimates:
+#mean in group WMT mean in group XER 
+#        0.4733802         0.5893700 
+
+# STREAMCAT NLCD URBAN IN RIPARIAN WATERSHED
+# Total urban
+t.test(PCTURB_WsRp100~AG_ECO9, data=wmt_xer)
+# mean in group WMT mean in group XER 
+         #1.772051          2.860817 
+# t = -2.5267, df = 401.25, p-value = 0.0119
+
+# Low intensity of urban development
+t.test(PCTURBLO_WsRp100~AG_ECO9, data=wmt_xer)
+#mean in group WMT mean in group XER 
+#        0.3090037         0.9180546
+#t = -3.3301, df = 341.42, p-value = 0.0009629
+
+# Moderate intensity of urban development
+t.test(PCTURBMD_WsRp100~AG_ECO9, data=wmt_xer)
+#mean in group WMT mean in group XER 
+#        0.0897342         0.4270645
+# t = -3.1192, df = 296.23, p-value = 0.001992
+
+# High density of urban development
+t.test(PCTURBHI_WsRp100~AG_ECO9, data=wmt_xer)
+#mean in group WMT mean in group XER 
+       #0.01055457        0.06709155
+# t = -3.4184, df = 297.54, p-value = 0.0007178
+
+# Combine moderate and high intensity land use development classes
+wmt_xer$PCTURBMDHI_WsRp100 <- wmt_xer$PCTURBMD_WsRp100 + wmt_xer$PCTURBHI_WsRp100
+summary(wmt_xer$PCTURBMDHI_WsRp100)
+
+# Mod + High density of urban development
+t.test(PCTURBMDHI_WsRp100~AG_ECO9, data=wmt_xer)
+#mean in group WMT mean in group XER 
+#        0.1002888         0.4941560 
+#t = -3.2122, df = 295.62, p-value = 0.001463
+
+```
+
+
+
+```{r, echo=FALSE, results='hide'}
+# PRINT BOXPLOTS
+tiff(filename="C:/Users/EFergus/OneDrive - Environmental Protection Agency (EPA)/a_NLA_OE_project/Project_repository/Routput/Figures/Boxplot_WMTXER_benthic.tiff",
+     width=5, height=10, units="in", res=300)
+grid.arrange(arrangeGrob(bx_oe,
+                         bx_mmi,
+                         bx_ept,
+                         nrow=3))
+                         #ncol=2,widths=c(4,3.5)),
+             #legend,nrow=2,heights=c(8, .5))
+dev.off()
+```
+## BOXPLOT OF LANDUSE
+```{r, echo=FALSE,}
+bx_urb<-ggplot(wmt_xer, aes(x=AG_ECO9, y = PCTURB_WS)) + geom_boxplot() +
+  stat_compare_means(method="t.test") +
+  theme_bw(base_size=12)+
+  theme(plot.title = element_text(family = "AR",face="plain",size=14, hjust=0.5),
+        axis.text.x = element_blank(),
+        axis.text.y = element_text(family = "AR", size=12),
+        axis.title.x = element_blank(),#
+        axis.title.y = element_text(family="AR"), #element_blank(),#
+        strip.text.x = element_blank(),
+        panel.grid.major =  element_line(colour = NA),
+        panel.grid.minor=element_line(colour = NA))# +
+  #ggtitle("Developed Ws")
+
+bx_urb
+
+bx_agr<-ggplot(wmt_xer, aes(x=AG_ECO9, y = PCTAGR_WS)) + geom_boxplot() +
+  stat_compare_means(method="t.test") +
+  theme_bw(base_size=12)+
+  theme(plot.title = element_text(family = "AR",face="plain",size=14, hjust=0.5),
+        axis.text.x = element_text(family = "AR", size=12),
+        axis.text.y = element_text(family = "AR", size=12),
+        axis.title.x = element_blank(),#
+        axis.title.y = element_text(family="AR"), #element_blank(),#
+        strip.text.x = element_blank(),
+        panel.grid.major =  element_line(colour = NA),
+        panel.grid.minor=element_line(colour = NA))# +
+  #ggtitle("Agriculture Ws")
+
+bx_agr
+
+
+bx_agr_rp<-ggplot(wmt_xer, aes(x=AG_ECO9, y = W1_HAG)) + geom_boxplot() +
+  stat_compare_means(method="t.test") +
+  theme_bw(base_size=12)+
+  theme(plot.title = element_text(family = "AR",face="plain",size=14, hjust=0.5),
+        axis.text.x = element_blank(),
+        axis.text.y = element_text(family = "AR", size=12),
+        axis.title.x = element_blank(),#
+        axis.title.y = element_text(family="AR"), #element_blank(),#
+        strip.text.x = element_blank(),
+        panel.grid.major =  element_line(colour = NA),
+        panel.grid.minor=element_line(colour = NA)) #+
+  #ggtitle("Riparian Agr index")
+
+bx_agr_rp
+
+bx_urb_rp<-ggplot(wmt_xer, aes(x=AG_ECO9, y = W1_HNOAG)) + geom_boxplot() +
+  stat_compare_means(method="t.test") +
+  theme_bw(base_size=12)+
+  theme(plot.title = element_text(family = "AR",face="plain",size=14, hjust=0.5),
+        axis.text.x = element_text(family = "AR", size=12),
+        axis.text.y = element_text(family = "AR", size=12),
+        axis.title.x = element_blank(),#
+        axis.title.y = element_text(family="AR"), #element_blank(),#
+        strip.text.x = element_blank(),
+        panel.grid.major =  element_line(colour = NA),
+        panel.grid.minor=element_line(colour = NA)) #+
+  #ggtitle("Riparian Non-Agr index")
+
+bx_urb_rp
+
+
+# PRINT BOXPLOTS
+tiff(filename="C:/Users/EFergus/OneDrive - Environmental Protection Agency (EPA)/a_NLA_OE_project/Project_repository/Routput/Figures/Boxplot_WMTXER_LU_Ws.tiff",
+     width=3, height=5, units="in", res=300)
+grid.arrange(arrangeGrob(bx_urb,
+                         bx_agr,
+                         nrow=2))
+                         #ncol=2,widths=c(4,3.5)),
+             #legend,nrow=2,heights=c(8, .5))
+dev.off()
+
+tiff(filename="C:/Users/EFergus/OneDrive - Environmental Protection Agency (EPA)/a_NLA_OE_project/Project_repository/Routput/Figures/Boxplot_WMTXER_LU_Rp.tiff",
+     width=3, height=5, units="in", res=300)
+grid.arrange(arrangeGrob(bx_agr_rp,
+                         bx_urb_rp,
+                         nrow=2))
+                         #ncol=2,widths=c(4,3.5)),
+             #legend,nrow=2,heights=c(8, .5))
+dev.off()
+```
 
 ## Number of missing observations by variable
 
-```{r, echo=FALSE, echo=FALSE, results='hide'}
+```{r, echo=FALSE, results='hide'}
 # WMT
 na_count <-wmt_w %>%
   summarise(across(everything(),~sum(is.na(.))))
@@ -159,6 +484,31 @@ clim_x
 ```
 
 
+# Hydrology variables
+```{r, echo=FALSE, message=FALSE}
+# HYDRO AND BIOTIC INDICES
+hydro_w<-wmt_w %>%
+  filter(!is.na(PSUMPY_SY_WS))%>%
+  select(c(LQLow_kmcl,LQbkf_kmcl, evap_index_sc,
+           LOE_QLow_cl, LOE_Qbkf_cl,
+           OE_SCORE, MMI_BENT, EPT_RICH))%>%
+  #LOE_XCMGW_use,LOE_XFC_NAT_use, LOE_RBS_use)) %>%
+  GGally::ggpairs()+ #,progress=FALSE
+  ggtitle("WMT wade")
+
+print(hydro_w)
+
+hydro_x<-xer_w %>%
+  filter(!is.na(PSUMPY_SY_WS))%>%
+  select(c(LQLow_kmcl,LQbkf_kmcl,evap_index_sc,
+           OE_SCORE, MMI_BENT, EPT_RICH))%>%
+  #LOE_XCMGW_use,LOE_XFC_NAT_use, LOE_RBS_use)) %>%
+  GGally::ggpairs()+
+  ggtitle("Xeric wade")
+
+hydro_x
+```
+
 # Anthropogenic variables: WMT
 ```{r, echo=FALSE, message=FALSE}
 # HUMAN AND BIOTIC INDICES
@@ -177,13 +527,36 @@ print(anthro_w)
 anthro_nat_w<-wmt_w %>%
   filter(!is.na(PSUMPY_SY_WS))%>%
   select(c(asin_PCTURB_WS,asin_PCTAGR_WS,
-           W1_HAG,W1_HNOAG,
-           ElevWs,BFIWs,PermWs,HydrlCondWs,L_SLOPE_DPTH))%>%
+           W1_HAG,W1_HNOAG,PCTNATTERR_WsRp100,
+           ElevWs,BFIWs,HydrlCondWs,sp_strm_pwr))%>% #,PermWs
   #LOE_XCMGW_use,LOE_XFC_NAT_use, LOE_RBS_use)) %>%
   GGally::ggpairs()+ #,progress=FALSE
   ggtitle("WMT wade: human+natural")
 
 print(anthro_nat_w)
+
+# HUMAN + HYDRO
+anthro_hydro_w<-wmt_w %>%
+  filter(!is.na(PSUMPY_SY_WS))%>%
+  select(c(asin_PCTURB_WS,asin_PCTAGR_WS,
+           W1_HAG, W1_HNOAG,
+           L_RdDensWs,PopDen2010Ws,
+           LQLow_kmcl,LQbkf_kmcl))%>%
+  #LOE_XCMGW_use,LOE_XFC_NAT_use, LOE_RBS_use)) %>%
+  GGally::ggpairs()+ #,progress=FALSE
+  ggtitle("WMT wade: human+hydro")
+
+print(anthro_hydro_w)
+
+anthro_hydro_chem_w<-wmt_w %>%
+  filter(!is.na(PSUMPY_SY_WS))%>%
+  select(c(L_SULF,L_CHLR,L_PTL,L_NTL,L_TURB,PCT_FN,
+           LQLow_kmcl,LQbkf_kmcl))%>%
+  #LOE_XCMGW_use,LOE_XFC_NAT_use, LOE_RBS_use)) %>%
+  GGally::ggpairs()+ #,progress=FALSE
+  ggtitle("WMT wade: human+hydro")
+
+print(anthro_hydro_chem_w)
 
 # XER
 anthro_x<-xer_w %>%
@@ -195,11 +568,23 @@ anthro_x<-xer_w %>%
   GGally::ggpairs()+ #,progress=FALSE
   ggtitle("XER wade: human+biotic")
 
-print(anthro_w)
+print(anthro_x)
+
+anthro_nat_x<-xer_w %>%
+  filter(!is.na(PSUMPY_SY_WS))%>%
+  select(c(asin_PCTURB_WS,asin_PCTAGR_WS,
+           W1_HAG,W1_HNOAG,PCTNATTERR_WsRp100,
+           ElevWs,BFIWs,HydrlCondWs,sp_strm_pwr))%>% #,PermWs
+  #LOE_XCMGW_use,LOE_XFC_NAT_use, LOE_RBS_use)) %>%
+  GGally::ggpairs()+ #,progress=FALSE
+  ggtitle("XER wade: human+natural")
+
+print(anthro_nat_x)
+
 ```
 
 WMT outlier observation
-```{r, echo=FALSE, message=FALSE}
+```{r, echo=FALSE}
 # Cooks distance to see if observation is highly influential
 # https://stats.stackexchange.com/questions/164099/removing-outliers-based-on-cooks-distance-in-r-language
 # THERE IS A ONE OBSERVATION WITH HIGH AGRICULTURE IN THE WATERSHED
@@ -225,7 +610,7 @@ test$outlier<-ifelse(test$cooksd < 4/nrow(wmt_w),"keep", "delete")
 # EXAMINE AGRICULTURAL OUTLIERS
 test2<-test%>%
 filter(outlier=="delete")%>%
-select(SITE_ID,VISIT_NO,DATE_COL, YEAR, STATE,PCTAGR_WS,NTL_RESULT,LRBS_use,W1_HAG,W1_HNOAG,Lpt01_XCMGW,LQLow_kmcl,LQbkf_kmcl,WsAreaSqKm,OE_SCORE,MMI_BENT, EPT_RICH)
+select(SITE_ID,VISIT_NO,DATE_COL, YEAR, STATE,PCTAGR_WS,NTL_RESULT,LRBS_use,W1_HAG,W1_HNOAG,Lpt01_XCMGW,LQLow_kmcl,LQbkf_kmcl,WsAreaSqKm,OE_SCORE,MMI_BENT, EPT_RICH, cooksd,outlier)
 
 # Table of number of outliers based on Cook's distance agriculture
 agr_out<- test2%>%
@@ -235,6 +620,7 @@ summarise(n=n())
 ```
 
 Agriculture outlier in WMT wadeable subset
+Has a cook's distance 3.37, which is pretty high
 ```{r, echo=FALSE, message=FALSE}
 print("Number of agriculture Ws outliers in WMTw subset based on Cook's d =")
 nrow(test2)
@@ -326,5 +712,158 @@ hab_anthro_x<-xer_w %>%
 print(hab_anthro_x)
 ```
 
+
+# XERIC: Examine spurious positive relationship between % Agr and O/E 
 ```{r, echo=FALSE, message=FALSE}
+# Examine whether agriculture in the XER ecoregion is correlated with other factors that may influence O/E
+
+agr_x<-xer_w %>%
+  filter(!is.na(PSUMPY_SY_WS))%>%
+  select(c(asin_PCTAGR_WS,OE_SCORE,Lpt01_XCMGW,Precip8110Ws,L_NABD_NrmStorWs_ratio,HydrlCondWs,BFIWs,
+           LQLow_kmcl))%>%
+  #LOE_XCMGW_use,LOE_XFC_NAT_use, LOE_RBS_use)) %>%
+  GGally::ggpairs()+ #,progress=FALSE
+  ggtitle("XER wade: human+hydrology")
+
+print(agr_x)
+
+###################
+# PRINT Correlation matrix
+tiff(filename="C:/Users/EFergus/OneDrive - Environmental Protection Agency (EPA)/a_NLA_OE_project/Project_repository/Routput/Figures/Corr_matrix_agr_XER.tiff",
+     width=7, height = 6, units="in", res=150)
+agr_x
+dev.off()
+
+####################
+## BREAK DOWN BY AG TYPES
+# PCTHAY_WS
+# PCTCROP_WS
+# TRANSFORM LANDUSE CLASSES
+xer_w <- xer_w%>%
+  mutate(asin_PCTHAY_WS = asin(sqrt(PCTHAY_WS/100)),
+         asin_PCTCROP_WS = asin(sqrt(PCTCROP_WS/100)),
+         asin_PCTGRS_WS = asin(sqrt(PCTGRS_WS/100))
+  )
+
+agr2_x<-xer_w %>%
+  filter(!is.na(PSUMPY_SY_WS))%>%
+  select(c(asin_PCTAGR_WS,asin_PCTHAY_WS,asin_PCTCROP_WS,
+           OE_SCORE,Precip8110Ws,HydrlCondWs,
+           LQLow_kmcl))%>%
+  #LOE_XCMGW_use,LOE_XFC_NAT_use, LOE_RBS_use)) %>%
+  GGally::ggpairs()+ #,progress=FALSE
+  ggtitle("XER wade: human+hydrology")
+
+print(agr2_x)
+
+###################
+# PRINT Correlation matrix
+tiff(filename="C:/Users/EFergus/OneDrive - Environmental Protection Agency (EPA)/a_NLA_OE_project/Project_repository/Routput/Figures/Corr_matrix_agr2_XER.tiff",
+     width=7, height = 6, units="in", res=150)
+agr2_x
+dev.off()
+
+summary(xer_w$PCTAGR_WS)
+#   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+ #0.0000  0.0000  0.1448  3.3734  1.5948 76.0281 
+
+summary(xer_w$PCTHAY_WS)
+#   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+ #0.0000  0.0000  0.0370  0.8467  0.5840 35.6629 
+
+summary(xer_w$PCTCROP_WS)
+#   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+ #0.0000  0.0000  0.0000  2.5267  0.3171 75.1597 
+
+# Look at distributions of agriculture type
+# melt data
+xer_agr <- melt(data=xer_w,
+                id.vars = c("SITE_ID","VISIT_NO","YEAR"),
+                measure.vars=c("asin_PCTHAY_WS","asin_PCTCROP_WS"),
+                variable.name="ag_type",
+                value.name="PCTAgr_type")
+
+# BOXPLOT AG TYPE IN XER
+bx_agr<-ggplot(xer_agr, aes(x=ag_type, y = PCTAgr_type)) + geom_boxplot() +
+  stat_compare_means(method="t.test") +
+  theme_bw(base_size=12)+
+  theme(plot.title = element_text(family = "AR",face="plain",size=14, hjust=0.5),
+        axis.text.x = element_text(family = "AR", size=12), #element_blank(), 
+        axis.text.y = element_text(family = "AR", size=12),
+        axis.title.x = element_blank(),#
+        axis.title.y = element_text(family="AR"), #element_blank(),#
+        strip.text.x = element_blank(),
+        panel.grid.major =  element_line(colour = NA),
+        panel.grid.minor=element_line(colour = NA)) +
+  ggtitle("Agriculture types in Xeric")
+
+bx_agr
+
+# PRINT Boxplot
+tiff(filename="C:/Users/EFergus/OneDrive - Environmental Protection Agency (EPA)/a_NLA_OE_project/Project_repository/Routput/Figures/boxplot_agr_type_XER.tiff",
+     width=7, height = 6, units="in", res=150)
+bx_agr
+dev.off()
+
 ```
+
+# XERIC: Examine variables used to get at E and %AgrWs
+
+```{r, echo=FALSE, message=FALSE}
+agr3_x<-xer_w %>%
+  filter(!is.na(PSUMPY_SY_WS))%>%
+  select(c(asin_PCTAGR_WS,Precip8110Ws,ElevWs,Tmean8110Ws,MAST_SY, E,O,
+           OE_SCORE))%>%
+  #LOE_XCMGW_use,LOE_XFC_NAT_use, LOE_RBS_use)) %>%
+  GGally::ggpairs()+ #,progress=FALSE
+  ggtitle("XER wade: human+pred of E")
+
+print(agr3_x)
+
+###################
+# PRINT Correlation matrix
+tiff(filename="C:/Users/EFergus/OneDrive - Environmental Protection Agency (EPA)/a_NLA_OE_project/Project_repository/Routput/Figures/Corr_matrix_agr3_XER.tiff",
+     width=7, height = 6, units="in", res=150)
+agr3_x
+dev.off()
+
+##############
+## LOOK AT WMT OUT OF CURIOUSITY
+agr3_w<-wmt_w %>%
+  filter(!is.na(PSUMPY_SY_WS))%>%
+  select(c(asin_PCTAGR_WS,Precip8110Ws,ElevWs,Tmean8110Ws,MAST_SY, E,O,
+           OE_SCORE))%>%
+  #LOE_XCMGW_use,LOE_XFC_NAT_use, LOE_RBS_use)) %>%
+  GGally::ggpairs()+ #,progress=FALSE
+  ggtitle("WMT wade: human+pred of E")
+
+print(agr3_w)
+
+# PRINT Correlation matrix
+tiff(filename="C:/Users/EFergus/OneDrive - Environmental Protection Agency (EPA)/a_NLA_OE_project/Project_repository/Routput/Figures/Corr_matrix_agr3_WMT.tiff",
+     width=7, height = 6, units="in", res=150)
+agr3_w
+dev.off()
+
+##########################
+## Look at what variables were droppped in O/E compared to MMI and EPT models
+agr4_x<-xer_w %>%
+  filter(!is.na(PSUMPY_SY_WS))%>%
+  select(c(asin_PCTAGR_WS,OE_SCORE,E, O,Lpt01_XCMGW,asin_PCTWET_WsRp100,L_STRM_POWER))%>%
+  #LOE_XCMGW_use,LOE_XFC_NAT_use, LOE_RBS_use)) %>%
+  GGally::ggpairs()+ #,progress=FALSE
+  ggtitle("XER wade: human+hydrology")
+
+print(agr4_x)
+
+###################
+# PRINT Correlation matrix
+tiff(filename="C:/Users/EFergus/OneDrive - Environmental Protection Agency (EPA)/a_NLA_OE_project/Project_repository/Routput/Figures/Corr_matrix_agr4_XER.tiff",
+     width=7, height = 6, units="in", res=150)
+agr4_x
+dev.off()
+
+
+```
+
+
