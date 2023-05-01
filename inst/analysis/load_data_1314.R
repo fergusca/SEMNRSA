@@ -382,7 +382,7 @@ nrsa_strmcat_proc <-nrsa_strmcat_proc %>%
 # SUBSET OF VARIABLES TO MERGE WITH OTHER SURVEYS
 nrsa1314<-nrsa_strmcat_proc%>%
   select(c("UID","SITE_ID","VISIT_NO","DATE_COL","YEAR", "SITETYPE","STATE","AG_ECO3","AG_ECO9","AG_ECO5",
-           "US_L3CODE","US_L4CODE",
+           "US_L3CODE","US_L4CODE","HUC8",
            "LAT_DD83","LON_DD83","PROTOCOL","REALM","STRAH_ORD",
            "MMI_BENT","OE_SCORE_OLD","OE_SCORE",
            "AMMONIA_N_RESULT","ANC_RESULT","CHLORIDE_RESULT","COLOR_RESULT","COND_RESULT","DOC_RESULT","MAGNESIUM_RESULT","SODIUM_RESULT",
@@ -416,7 +416,7 @@ nrsa1314<-nrsa_strmcat_proc%>%
            "RdDensWs","RdDensWsRp100",
            "PopDen2010Ws","PopDen2010WsRp100",
            "AgKffactWs","FertWs","ManureWs","NPDESDensWs","NPDESDensWsRp100"))
-#n = 2261 (visits 1 & 2) with 187 variables
+#n = 2261 (visits 1 & 2) with 190 variables
 
 #######################
 #GET COLUMN NAMES TO CHECK

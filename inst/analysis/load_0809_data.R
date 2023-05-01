@@ -292,7 +292,7 @@ test=nrsa1_0809%>%
 #usethis::use_data(nrsa1,overwrite=TRUE)
 #usethis::use_data(nrsa_proc,overwrite=TRUE)
 
-# EXPORE DATA AS .csv files
+# EXPLORE DATA AS .csv files
 write.csv(nrsa_v2,"data_processed/nrsa0809_all.csv",row.names = FALSE)
 write.csv(nrsa1_0809,"data_processed/nrsa0809_visit1.csv",row.names = FALSE)
 
@@ -307,7 +307,7 @@ write.csv(nrsa1_0809,"data_processed/nrsa0809_visit1.csv",row.names = FALSE)
 # Merge processed NRSA and StreamCat datasets together using left_join
 nrsa_strmcatv1<-left_join(nrsa_v2,strcat,
                         by="SITE_ID")
-# n = 2303 obs with 295 variables
+# n = 2303 obs with 301 variables
 
 #############
 ## DATA PROCESSING
@@ -460,7 +460,7 @@ summary(nrsa_strmcat_proc$XMW)
 ## REDUCE VARIABLES
 nrsa0809<-nrsa_strmcat_proc%>%
   select(c("UID","SITE_ID","VISIT_NO","DATE_COL","YEAR","SITE_CLASS","STATE","AGGR_ECO3_2015","AGGR_ECO9_2015","AG_ECO5",
-           "US_L3CODE","US_L4CODE",
+           "US_L3CODE","US_L4CODE","HUC8",
            "LAT_DD83","LON_DD83","PROTOCOL","REALM","STRAHLERORDER",
            "MMI_BENT","OE_SCORE_OLD","OE_SCORE",
            "NH4","ANC","CL","COLOR","COND","DOC","MG","SODIUM","K","NO3","NO2","NTL","PTL","SO4","TSS","TURB",

@@ -371,7 +371,7 @@ nrsa_strmcat_proc <-nrsa_strmcat_proc %>%
 
 nrsa1819<-nrsa_strmcat_proc%>%
   select(c("UID","SITE_ID","VISIT_NO","DATE_COL","YEAR","SITETYPE","STATE_NM","AG_ECO3","AG_ECO9","AG_ECO5",
-           "US_L3CODE","US_L4CODE",
+           "US_L3CODE","US_L4CODE","HUC8",
            "LAT_DD83","LON_DD83","PROTOCOL","REALM","STRAH_ORD",
            "OE_SCORE",
            "AMMONIA_N_RESULT","ANC_RESULT","CHLORIDE_RESULT","COLOR_RESULT","COND_RESULT","DOC_RESULT",

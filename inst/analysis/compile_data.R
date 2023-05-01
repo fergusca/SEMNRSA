@@ -10,6 +10,7 @@
 ## 9/2/2022 - Added Rd density & human population
 ## 9/6/2022 - Added O and E
 ## 2/6/2023 - Added riparian understory and groundcover (XMW, XGW, XGB)
+## 3/14/2023 - Added HUC8 to compiled dataset
 ###########
 
 rm(list=ls())
@@ -25,7 +26,7 @@ library(ggpubr) # statistics for comparison
 library(reshape2)
 
 ###############
-## READ PROCESSED NRSA-STREAMCAT DATA - vars = 185 or 182
+## READ PROCESSED NRSA-STREAMCAT DATA - vars = 190 or 188
 ##  Processed data are in the R project (C:drive)
 # NRSA 2008-09 n = 2303
 nrsa0809 <- read.csv("data_processed/nrsa0809/nrsa0809_to_merge.csv")
@@ -64,7 +65,7 @@ nrsa1819<-nrsa1819%>%
 # REORDER NRSA1819 variables
 nrsa1819<-nrsa1819%>%
   select(c("UID","SITE_ID","VISIT_NO","DATE_COL","YEAR","SITETYPE","STATE","AG_ECO3","AG_ECO9","AG_ECO5",
-           "US_L3CODE","US_L4CODE",
+           "US_L3CODE","US_L4CODE","HUC8",
            "LAT_DD83","LON_DD83","PROTOCOL","REALM",#"STRAH_ORD",
            "OE_SCORE",
            "AMMONIA_N_RESULT","ANC_RESULT","CHLORIDE_RESULT","COLOR_RESULT","COND_RESULT","DOC_RESULT","MAGNESIUM_RESULT","SODIUM_RESULT",
@@ -136,10 +137,13 @@ nrsa1819$NITRITE_N_RESULT<-as.numeric(nrsa1819$NITRITE_N_RESULT)
 head(nrsa1819$NITRITE_N_RESULT)
 str(nrsa1819$NITRITE_N_RESULT)
 
-## THREE DATASETS HAVE 186 variables in matching order
+# Change HUC8 from integer to character
+nrsa0809$HUC8<- as.character(nrsa0809$HUC8)
+
+## THREE DATASETS HAVE 187 variables in matching order
 
 ########################
-## COMBINE DATASETS - n =6674 obs with 187 vars
+## COMBINE DATASETS - n =6674 obs with 188 vars
 all_dat<-bind_rows(nrsa0809=nrsa0809, nrsa1314=nrsa1314, nrsa1819=nrsa1819,
                 .id="nrsa_survey")
 table(all_dat$nrsa_survey)
