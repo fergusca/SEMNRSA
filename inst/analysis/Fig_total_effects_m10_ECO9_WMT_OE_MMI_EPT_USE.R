@@ -2,11 +2,13 @@
 ## BARCHARTS OF TOTAL EFFECTS OF PREDICTORS
 ## RESPONSE WMT ECO9: OE, MMI, EPT
 ## WADEABLE SITES
-## Model v9 revised
+## Model v10
 ## Automated method taking R output and getting total effects rather than manipulating data in excel
 
 ## 8/15/2022
 ## 8/31/2022
+## 9/10/2022
+## 9/14/2022 included hi agr hi O/E observation back into analysis
 ###################
 
 remove(list=ls())
@@ -22,6 +24,7 @@ library(ggpubr)
 library(tidyr)
 #install.packages("RColorBrewer")
 library(RColorBrewer)
+library(stringr)
 
 ###################
 ## PLOTTING SPECIFICATIONS
@@ -55,6 +58,7 @@ ept<- read.csv("C:/Users/EFergus/OneDrive - Environmental Protection Agency (EPA
 #######################
 # Need to treat SEMNRSA like a package to be able to run function relabeling predictors
 devtools::load_all()
+library(SEMNRSA)
 
 # Call function sem_eff_tab to process the raw SEM output
 # Selects Total, Direct, and Indirect Effects on OE
@@ -130,7 +134,7 @@ total<-ggplot(teff_total,aes(Predictor,est.std,fill=Category)) +
                 position=position_dodge(.9))+
   scale_fill_manual(values=vid, drop=TRUE)+
   #scale_fill_manual(values=cbPalette, drop=TRUE)+
-  #ylim(-0.6,0.9)+
+  ylim(-0.50,0.50)+
   facet_wrap(~model, ncol=1)+
   geom_hline(aes(yintercept = 0))+
   theme_bw(base_size=12)+
@@ -149,7 +153,8 @@ total<-ggplot(teff_total,aes(Predictor,est.std,fill=Category)) +
         legend.title=element_blank(),
         legend.text=element_text(family="AR", size=11))+
   ylab("Total effects")+
-  xlab(NULL)#+
+  xlab(NULL)+
+  ggtitle("WMT")
 
 
 total
@@ -160,3 +165,81 @@ tiff(filename="C:/Users/EFergus/OneDrive - Environmental Protection Agency (EPA)
      width=6, height = 8, units="in", res=300)
 total
 dev.off()
+
+
+
+
+#########################
+## COMBINE WMT AND XER - run XER Fig code
+# GET LEGEND
+legend <- get_legend(total)
+
+# REMOVE LEGEND
+total <- total + theme(legend.position="none")
+
+# ARRANGE MULTIPLE GRAPHS AND LEGEND
+# https://stackoverflow.com/questions/13649473/add-a-common-legend-for-combined-ggplots
+tiff(filename="C:/Users/EFergus/OneDrive - Environmental Protection Agency (EPA)/a_NLA_OE_project/Project_repository/Routput/Figures/Tot_eff_ECO9_WMTXERw_m10_OE_MMI_EPT.tiff",
+     width=7.5, height=8, units="in", res=300)
+grid.arrange(arrangeGrob(total,
+                         total_x,
+                         ncol=2,widths=c(4,3.5)),
+             legend,nrow=2,heights=c(8, .5))
+dev.off()
+
+######################
+## FOR SFS PNW MEETING 10/4/22
+#   JUST O/E
+
+oe_wmt <- teff_total %>%
+  filter(Model=="OE")
+
+wmt_oe<-ggplot(oe_wmt,aes(Predictor,est.std,fill=Category)) +
+  geom_bar(stat = "identity", position=position_dodge()) +
+  geom_errorbar(aes(ymin=ci.lower, ymax=ci.upper), width=.2, # est_std-se_std
+                position=position_dodge(.9))+
+  scale_fill_manual(values=vid, drop=TRUE)+
+  #scale_fill_manual(values=cbPalette, drop=TRUE)+
+  ylim(-0.50,0.50)+
+  facet_wrap(~model, ncol=1)+
+  geom_hline(aes(yintercept = 0))+
+  theme_bw(base_size=12)+
+  theme(plot.title = element_text(family = "AR",face="plain",size=14, hjust=0.5),
+        axis.text.x = element_text(family = "AR", angle=45, hjust=1,size=12,
+                                   colour=c(rep("#440154",2), rep("#443983",2),rep("#31688e",3),rep("#21918c",1),rep("#440154",1),
+                                            rep("#35b779",3),rep("#90d743",1),rep("#fde725",2))),#, colour=c(rep("#8c510a",3),rep("#bf812d",1),rep("#dfc27d",3),rep("#c7eae5",2),rep("#80cdc1",1),rep("#c7eae5",1),rep("#35978f",2),rep("#01665e",1))),
+        axis.text.y = element_text(family = "AR", size=12),
+        axis.title.y = element_text(family="AR"), #element_blank(),#
+        strip.text.x = element_text(family="AR", size=12),
+        panel.grid.major =  element_line(colour = NA),
+        panel.grid.minor=element_line(colour = NA),
+        # panel.spacing = unit(c(1,1,0,4), "lines"),
+        legend.position= "bottom",
+        legend.key.size = unit(10, 'point'),
+        legend.title=element_blank(),
+        legend.text=element_text(family="AR", size=11))+
+  ylab("Total effects")+
+  xlab(NULL)+
+  ggtitle("WMT")
+
+wmt_oe
+
+# GET LEGEND
+legend <- get_legend(wmt_oe)
+
+# REMOVE LEGEND
+wmt_oe<- wmt_oe + theme(legend.position="none")
+
+###################
+# PRINT WMT O/E TOTAL EFFECTS FOR PRESENTATION
+tiff(filename="C:/Users/EFergus/OneDrive - Environmental Protection Agency (EPA)/a_NLA_OE_project/Project_repository/Routput/Figures/Tot_eff_ECO9_WMTw_m10_OE_ONLY.tiff",
+     width=5.5, height=5.5, units="in", res=300)
+grid.arrange(arrangeGrob(wmt_oe,
+                         ncol=1),
+             legend,nrow=2,heights=c(5.5, .5))
+dev.off()
+
+#tiff(filename="C:/Users/EFergus/OneDrive - Environmental Protection Agency (EPA)/a_NLA_OE_project/Project_repository/Routput/Figures/Tot_eff_ECO9_WMTw_m10_OE_ONLY.tiff",
+#     width=5.5, height = 5, units="in", res=200)
+#wmt_oe
+#dev.off()

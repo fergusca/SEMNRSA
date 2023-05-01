@@ -131,6 +131,54 @@ summary(fit_v15_XERw_OE_robust.est, standardized=TRUE, fit.measures=TRUE, modind
 mi_min <-modindices(fit_v15_XERw_OE_robust.est)
 print(mi_min[mi_min$mi >3.0,])
 
+## REVISED MODEL 3/24/23
+mymodel_v15_OE_xer <- '
+Lpt01_XCMGW ~ asin_PCTAGR_WS + asin_PCTURB_WS + W1_HAG + W1_HNOAG + L_STRM_POWER
+L_STRM_POWER ~ drought_mean + L_NABD_NrmStorWs_ratio + W1_HAG + asin_PCTNATTERR_WsRp100 # Modification index indicated better fit
+LQLow_kmcl~ asin_PCTAGR_WS + PSUMPY_SY_WS_sc + L_NABD_NrmStorWs_ratio + asin_PCTWET_WsRp100 + W1_HAG + W1_HNOAG
+LQbkf_kmcl ~ asin_PCTURB_WS + PSUMPY_SY_WS_sc + L_NABD_NrmStorWs_ratio +  W1_HAG + drought_mean
+evap_index_sc ~  LQLow_kmcl+ LQbkf_kmcl + PSUMPY_SY_WS_sc + asin_PCTNATTERR_WsRp100 + drought_mean + L_STRM_POWER
+LRBS_use ~ LQLow_kmcl + LQbkf_kmcl + W1_HAG + PSUMPY_SY_WS_sc
+L_NTL ~ asin_PCTURB_WS + Lpt01_XCMGW + W1_HNOAG + LQLow_kmcl + PSUMPY_SY_WS_sc
+L_SULF ~ asin_PCTURB_WS + evap_index_sc + W1_HNOAG + LQLow_kmcl + PSUMPY_SY_WS_sc + drought_mean
+
+OE_SCORE ~ LRBS_use + L_NTL + L_SULF + asin_PCTAGR_WS + asin_PCTNATTERR_WsRp100 + asin_PCTWET_WsRp100 + L_STRM_POWER
+
+# Covariance
+LQLow_kmcl~~LQbkf_kmcl
+L_STRM_POWER~~LQLow_kmcl
+L_STRM_POWER~~LQbkf_kmcl
+
+
+'
+fit_v15_XERw_OE_robust.est<- sem(mymodel_v15_OE_xer, data=xer_w,
+                                 estimator="MLM")
+
+summary(fit_v15_XERw_OE_robust.est, standardized=TRUE, fit.measures=TRUE, modindices=F,rsquare=TRUE)#, modindices=T, rsquare=TRUE) #
+
+
+##############
+## XER O/E
+# ROBUST ESTIMATION MAX LIKELIHOOD METHOD
+fit_v15_XERw_OE_robust.est<- sem(mymodel_v15_OE_xer, data=xer_w,
+                                 estimator="MLM")
+
+summary(fit_v15_XERw_OE_robust.est, standardized=TRUE, fit.measures=TRUE, modindices=F,rsquare=TRUE)#, modindices=T, rsquare=TRUE) #
+
+######################
+## Bollen.stine bootstrap to estimate parameters -OE
+fit_v15_XERw_OE_bootstrap_rev  <- sem(fit_v15_XERw_OE_robust.est, data=xer_w,
+                                      #group = "ECOREG_rev",
+                                      #missing="ML",
+                                      test="bollen.stine", se="boot",bootstrap=1000)
+
+summary(fit_v15_XERw_OE_bootstrap_rev, standardized=TRUE, fit.measures=TRUE, modindices=F,rsquare=TRUE)#, modindices=T, rsquare=TRUE) #
+
+
+
+
+
+
 #####################
 ## REVISED
 mymodel_v15_OE_rev_xer <- '
