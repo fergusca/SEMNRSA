@@ -10,7 +10,6 @@
 ## 9/2/2022 - Added Rd density & human population
 ## 9/6/2022 - Added O and E
 ## 2/6/2023 - Added riparian understory and groundcover (XMW, XGW, XGB)
-## 3/14/2023 - Added HUC8 to compiled dataset
 ###########
 
 rm(list=ls())
@@ -26,7 +25,7 @@ library(ggpubr) # statistics for comparison
 library(reshape2)
 
 ###############
-## READ PROCESSED NRSA-STREAMCAT DATA - vars = 190 or 188
+## READ PROCESSED NRSA-STREAMCAT DATA - vars = 185 or 182
 ##  Processed data are in the R project (C:drive)
 # NRSA 2008-09 n = 2303
 nrsa0809 <- read.csv("data_processed/nrsa0809/nrsa0809_to_merge.csv")
@@ -49,10 +48,7 @@ table(nrsa1819$STATE)
 nrsa0809$NTL<-nrsa0809$NTL/1000
 summary(nrsa0809$NTL)
 
-# Need to remove benthic MMI and Old OE from 0809 and 1314 surveys
-#names(nrsa0809)
-#names(nrsa1314)
-
+# Remove benthic MMI and Old OE from 0809 and 1314 surveys
 nrsa0809<-nrsa0809%>%
   select(-c("STRAHLERORDER","MMI_BENT","OE_SCORE_OLD"))
 
@@ -65,7 +61,7 @@ nrsa1819<-nrsa1819%>%
 # REORDER NRSA1819 variables
 nrsa1819<-nrsa1819%>%
   select(c("UID","SITE_ID","VISIT_NO","DATE_COL","YEAR","SITETYPE","STATE","AG_ECO3","AG_ECO9","AG_ECO5",
-           "US_L3CODE","US_L4CODE","HUC8",
+           "US_L3CODE","US_L4CODE",
            "LAT_DD83","LON_DD83","PROTOCOL","REALM",#"STRAH_ORD",
            "OE_SCORE",
            "AMMONIA_N_RESULT","ANC_RESULT","CHLORIDE_RESULT","COLOR_RESULT","COND_RESULT","DOC_RESULT","MAGNESIUM_RESULT","SODIUM_RESULT",
@@ -101,9 +97,7 @@ nrsa1819<-nrsa1819%>%
            "AgKffactWs","FertWs","ManureWs","NPDESDensWs","NPDESDensWsRp100"))
 
 names(nrsa1819) # dropped "XWIDTH",
-# Convert VISIT_NO from integer to character
-#nrsa0809$VISIT_NO<-as.character(nrsa0809$VISIT_NO)
-#nrsa1314$VISIT_NO<-as.character(nrsa1314$VISIT_NO)
+# Convert VISIT_NO from character to integer
 nrsa1819$VISIT_NO<- as.integer(nrsa1819$VISIT_NO)
 table(nrsa1819$VISIT_NO)
 
@@ -137,13 +131,10 @@ nrsa1819$NITRITE_N_RESULT<-as.numeric(nrsa1819$NITRITE_N_RESULT)
 head(nrsa1819$NITRITE_N_RESULT)
 str(nrsa1819$NITRITE_N_RESULT)
 
-# Change HUC8 from integer to character
-nrsa0809$HUC8<- as.character(nrsa0809$HUC8)
-
-## THREE DATASETS HAVE 187 variables in matching order
+## THREE DATASETS HAVE 186 variables in matching order
 
 ########################
-## COMBINE DATASETS - n =6674 obs with 188 vars
+## COMBINE DATASETS - n =6674 obs with 187 vars
 all_dat<-bind_rows(nrsa0809=nrsa0809, nrsa1314=nrsa1314, nrsa1819=nrsa1819,
                 .id="nrsa_survey")
 table(all_dat$nrsa_survey)
@@ -159,11 +150,6 @@ wqii<-wqii_org%>%
 all_dat_wid<-left_join(all_dat,wqii,
                           by=c("SITE_ID","VISIT_NO","YEAR"))
 names(all_dat_wid)
-
-# Drop duplicates - goes back to 6674
-#all_dat_id=all_dat_id%>%
-#  distinct(SITE_ID,VISIT_NO, .keep_all=TRUE)
-
 table(all_dat_wid$nrsa_survey)
 # nrsa0809 nrsa1314 nrsa1819
 # 2303     2261     2110
@@ -194,7 +180,6 @@ all_dat_id <- left_join(all_dat_id3, l4,
 #   1) Retain all the 0809 sites (VISIT_NO = 1)
 #   2) Retain all new sites 1314 (VISIT_NO = 1) - drop any 1314 sites that were in 0809
 #   3) Retain all new sites 1819 (VISIT_NO = 1) - drop any 1819 sites that were in either 0809 and/or 1314
-
 
 length(unique(nrsa0809$SITE_ID)) #n =2123
 length(unique(nrsa1314$SITE_ID)) #n = 2069
@@ -254,7 +239,6 @@ nrsa0809_only<-all_dat_id%>%
   filter(!UNIQUE_ID %in% siteid_1314) %>%
   filter(!UNIQUE_ID %in% siteid_1819)%>%
   mutate(RESAMPLE="NRSA0809")
-#names(nrsa0809_only)
 
 # ONLY IN 2013-14 n = 803
 nrsa1314_only <- all_dat_id%>%
@@ -279,7 +263,6 @@ nrsa0809_resamp<- all_dat_id %>%
 # RESAMPLED sites from 1314 n = 1458 OLD=480
 nrsa1314_resamp<- all_dat_id %>%
   filter(nrsa_survey=="nrsa1314")%>%
-  #filter(!UNIQUE_ID %in% siteid_0809) %>% # Not in 0809
   filter(UNIQUE_ID %in% siteid_0809|UNIQUE_ID %in% siteid_1819)%>% # does have matching ids with 2008-09 or 2018-19
   mutate(RESAMPLE="RESAMPLED")
 
@@ -329,19 +312,11 @@ all_dat_resample<- all_dat_resample%>%
   mutate(evap_index=(d.excess - 10)*-1)%>%
   mutate(evap_index_sc = evap_index/10)
 
-summary(all_dat_resample$d.excess)
-summary(all_dat_resample$d.excess_sc)
-summary(all_dat_resample$evap_index)
-summary(all_dat_resample$evap_index_sc)
-var(all_dat_resample$evap_index,na.rm = T) #[1] 43.90143
-var(all_dat_resample$evap_index_sc,na.rm = T) # [1] 0.4390143
-
-
 # CREATE CRITCIAL DIAMETER VARIABLE (Phil email 5/26/22)
 #  Compared to the LDCBF_G08 and the derived var is a little different for some and fills in some NAs
 all_dat_resample <- all_dat_resample%>%
-  mutate(LDCBF_use = LSUB_DMM - LRBS_use)#%>%
-  #select(LDCBF_use, LDCBF_G08)
+  mutate(LDCBF_use = LSUB_DMM - LRBS_use)
+
 summary(all_dat_resample$LDCBF_use)
 #   Min. 1st Qu.  Median    Mean 3rd Qu.    Max.    NA's
 #-3.4231  0.7004  1.1577  1.1199  1.6213  4.2537     193
@@ -355,7 +330,6 @@ summary(all_dat_resample$LDCBF_G08)
 #  Slope*depth/width = Specific Stream Power - close to shear stress
 all_dat_resample<- all_dat_resample%>%
   mutate(sp_strm_pwr = (XSLOPE_use+0.01)*(XDEPTH_CM/100)/(XWIDTH_use)) # convert depth (cm) to m
-summary(all_dat_resample$sp_strm_pwr)
 
 #####################
 ## TRANSFORM CHEMISTRY VARIABLES FOR MODEL
@@ -459,17 +433,12 @@ all_dat_resample2<-left_join(all_dat_resample,mmi_red,by=c("SITE_ID","VISIT_NO",
 all_dat_resample2$MMI_BENT_sc <- all_dat_resample2$MMI_BENT/100
 summary(all_dat_resample2$MMI_BENT_sc)
 var(all_dat_resample2$MMI_BENT_sc,na.rm = T) #[1] 0.04159292
-#var(all_dat_resample2$MMI_BENT,na.rm = T) #[1] 415.9292
-#var(all_dat_resample2$LRBS_use,na.rm=T) #[1] 1.378704
-#var(all_dat_resample2$asin_PCTAGR_WS) #[1] 0.1297567
-#var(all_dat_resample2$LQLow_kmcl,na.rm=T) #[1] 1.019986
 
 ## SCALE EPT 0-3.5
 all_dat_resample2$EPT_RICH_sc <- all_dat_resample2$EPT_RICH/10
 summary(all_dat_resample2$EPT_RICH_sc)
-#summary(all_dat_resample2$EPT_RICH)
 var(all_dat_resample2$EPT_RICH_sc,na.rm = T) #[1] 0.3785358
-#var(all_dat_resample2$EPT_RICH,na.rm = T) #[1] 37.85358
+
 
 # OE
 #var(all_dat_resample2$OE_SCORE,na.rm=T) #[1] 0.09672672
@@ -686,9 +655,6 @@ table(nrsa_all$nrsa_survey,nrsa_all$VISIT_NO)
 nrsa_all_visit1 <- nrsa_all%>%
   filter(VISIT_NO == 1)
 #n = 4389 obs/169 variables
-table(nrsa_all_visit1$VISIT_NO)
-length(unique(nrsa_all_visit1$SITE_ID))
-length(unique(nrsa_all_visit1$UNIQUE_ID))
 
 table(nrsa_all_visit1$nrsa_survey)
 #nrsa0809 nrsa1314 nrsa1819
@@ -725,64 +691,6 @@ write.csv(all_dat_unique,"data_processed/Compiled/nrsa081318_for_map.csv", row.n
 
 
 
-
-
-
-
-
-#####################
-## TABLE OF UNIQUE SITES
-table(all_dat_id$YEAR,all_dat_id$VISIT_NO)
-#       1    2
-#2008  791   69
-#2009 1332  111
-#2013  931   87
-#2014 1138  105
-#2018  941  100
-#2019  978   89
-
-unique0809<-all_dat_id %>%
-  filter(nrsa_survey=="nrsa0809")%>%
-  filter(!UNIQUE_ID%in%siteid_1314)%>%
-  filter(!UNIQUE_ID%in%siteid_1819) %>%
-  filter(VISIT_NO==1)
-table(unique0809$YEAR)
-#2008 2009
-# 481  851
-# There are 881 sites in 1314 that were originally sampled in 0809
-
-unique1314<-all_dat_id %>%
-  filter(nrsa_survey=="nrsa1314")%>%
-  #filter(!UNIQUE_ID%in%siteid_0809)%>%
-  filter(!UNIQUE_ID%in%siteid_1819) %>%
-  filter(VISIT_NO==1)
-table(unique1314$YEAR)
-# 2013 2014
-#  491  647
-#  322  479
-
-unique1819<-all_dat_id %>%
-  filter(nrsa_survey=="nrsa1819")%>%
-  #filter(!UNIQUE_ID%in%siteid_0809)%>%
-  #filter(!UNIQUE_ID%in%siteid_1314) %>%
-  filter(VISIT_NO==1)
-table(unique1819$YEAR)
-#2018 2019
-#941  978
-#2018 2019
-#449  538
-
-# CHECK
-#test <-nrsa1314_proc[!nrsa1314_proc$UNIQUE_ID %in% nrsa0809_proc$UNIQUE_ID, c(1:168)]
-length(unique(nrsa0809_proc$UNIQUE_ID))
-length(unique(nrsa1314_proc$UNIQUE_ID))
-both<-all_dat_id%>%
-  filter(nrsa_survey=="nrsa0809"|nrsa_survey=="nrsa1314")
-length(unique(both$UNIQUE_ID))
-1283+2123
-# WHEN select unique IDS for combined datasets 0809+1314 = 3402
-# BUT When we add the unique 1314 (that does not include 0809 IDs) + 0809 unique IDs
-#   we get = 3406 - there are four extra??
 
 
 

@@ -13,9 +13,6 @@ library(devtools)
 devtools::load_all("./") # Loads current directory
 library(SEMNRSA)
 
-# LOAD data stored in Rpackage - a .rda file
-#load(file="data/nrsa.rda")
-
 # ORIGINAL NRSA 2013-14 DATA downloaded from website 8/16/21
 #siteinformation_wide,nrsa1314_widechem,bentmmi, landmet, phabmed
 
@@ -168,7 +165,6 @@ wqii<- wqii_org%>%
 
 length(unique(wqii$SITE_ID)) #n=2070
 
-
 # Water isotopes
 isotope_org$DATE_COL<-as.Date(isotope_org$DATE_COL, format="%m/%d/%Y")
 isotope_org$YEAR <-format(isotope_org$DATE_COL,"%Y")
@@ -320,7 +316,6 @@ length(unique(nrsa_strmcat1$SITE_ID)) # n = 2069
 # EXPORT DATA AS .csv files
 write.csv(nrsa_strmcat_proc,"data_processed/nrsa1314/nrsa1314_strmcat_all.csv", row.names=FALSE)
 write.csv(nrsa_strmcat1,"data_processed/nrsa1314/nrsa1314_strmcat_visit1.csv", row.names=FALSE)
-#colnames(nrsa_strmcat1)
 dat_names<-data.frame(colnames(nrsa_strmcat1))
 write.csv(dat_names,"data_processed/nrsa1314/column_vars1314.csv", row.names=FALSE)
 
@@ -425,72 +420,3 @@ write.csv(dat_names_share,"data_processed/nrsa1314/column_varsSHARE_1314.csv", r
 
 ## WRITE TO CSV
 write.csv(nrsa1314,"data_processed/nrsa1314/nrsa1314_to_merge.csv", row.names=FALSE)
-
-
-
-
-
-
-#######################
-## OLD - CHECK LISTS
-# https://stackoverflow.com/questions/23353067/comparing-two-lists-r
-length(unique(nrsa_proc$SITE_ID))
-#create vectors combining siteID and visitno
-org1<-site_org%>%
-  unite('ID',SITE_ID,VISIT_NO)
-org<-unlist(org1$ID) #n=2261
-
-proc1<-nrsa_proc%>%
-  unite('ID',SITE_ID,VISIT_NO)
-proc<-unlist(proc1$ID)#n=2267
-
-#See if in both
-both<-org %in% proc
-table(both)
-
-#What is in both
-int <-intersect(org,proc)
-int #2069
-
-# What is different in original - nothing
-difs <-setdiff(org, proc)
-difs
-# And what is different in processed - nothing
-difs2 <-setdiff(proc,org)
-difs2
-
-# Check for duplicate site-id and visit no
-duplic<-nrsa_proc%>%
-  group_by(SITE_ID,VISIT_NO)%>%
-  filter(n()>1)
-# There are 11 observations that are duplicates for site and visit
-# in isotope dataset - 2 each:  OKLS-1176,WILS-1089,WIS9-0935,FLS9-0921
-# in phab_oe dataset - 3 times: MORM-1002
-
-####################
-# Drop duplicate observations and retain first observation (even though isotope values are different)
-# https://www.codecademy.com/courses/learn-dplyr/lessons/r-data-cleaning/exercises/duplicates#:~:text=To%20check%20for%20duplicates%2C%20we,which%20rows%20are%20duplicate%20rows.&text=We%20can%20see%20that%20the,calories%2C%20is%20a%20duplicate%20row.
-# Retains first observation n = 2261 compared to n=2267
-nrsa_proc2= nrsa_proc%>%
-  distinct(SITE_ID,VISIT_NO, .keep_all=TRUE)
-
-#####################
-# SUBSET ONLY VISIT_NO = 1 n = 2069 lakes
-nrsa1<-nrsa_proc2 %>%
-  filter(VISIT_NO==1)
-length(unique(nrsa1$SITE_ID)) # n = 2069
-
-test=nrsa1%>%
-  group_by(SITE_ID)%>%
-  filter(n()>1)
-
-# Store processed data within the package
-usethis::use_data(nrsa1,overwrite=TRUE)
-
-usethis::use_data(nrsa_proc,overwrite=TRUE)
-
-# EXPORE DATA AS .csv files
-write.csv(nrsa_proc2,"data_processed/nrsa_all.csv")
-write.csv(nrsa1,"data_processed/nrsa_visit1.csv")
-
-

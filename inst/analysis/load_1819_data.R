@@ -22,13 +22,8 @@ library(SEMNRSA)
 # On OneDrive
 site_org <- read.csv("C:/Users/EFergus/OneDrive - Environmental Protection Agency (EPA)/a_NLA_OE_project/Data/NRSA_1819_website/nrsa-1819-site-information-data-updated.csv")
 chem_org <- read.csv("C:/Users/EFergus/OneDrive - Environmental Protection Agency (EPA)/a_NLA_OE_project/Data/NRSA_1819_website/nrsa_1819_water_chemistry_chla_-_data.csv")
-#bent_org <- read.csv("C:/Users/EFergus/OneDrive - Environmental Protection Agency (EPA)/a_NLA_OE_project/Data/NRSA_0809_website/bentcond.csv")
-#land_org <- read.csv("C:/Users/EFergus/OneDrive - Environmental Protection Agency (EPA)/a_NLA_OE_project/Data/NRSA_0809_website/land.csv")
 phab_org <- read.csv("C:/Users/EFergus/OneDrive - Environmental Protection Agency (EPA)/a_NLA_OE_project/Data/NRSA_1819_website/nrsa_1819_physical_habitat_larger_set_of_metrics_-_data.csv")
 strcat_org <-read.csv("C:/Users/EFergus/OneDrive - Environmental Protection Agency (EPA)/a_NLA_OE_project/Data/StreamCat/NRSA_2018_19/FINAL_TABLE_NRSA_1819.csv")
-
-#chem_org2 <- read.csv("C:/Users/EFergus/OneDrive - Environmental Protection Agency (EPA)/a_NLA_OE_project/Data/NRSA_0809_website/fieldchemmeasure.csv")
-#site_org2 <- read.csv("C:/Users/EFergus/OneDrive - Environmental Protection Agency (EPA)/a_NLA_OE_project/Data/NRSA_0809_website/ext_siteinfo.csv")
 
 # Load other NRSA data compiled across surveys
 benthic_oe_org<-read.csv("C:/Users/EFergus/OneDrive - Environmental Protection Agency (EPA)/a_NLA_OE_project/Data/NRSA_benthic_indices/NRSA2008-2019_OE_Scores.csv")
@@ -181,10 +176,8 @@ test<-isotope%>%
 
 # WRITE REDUCED DATASETS TO NEW FOLDER TO MERGE
 write.csv(site_org,"data_to_merge_1819/a_site.csv",row.names=FALSE)
-#write.csv(bent,"data_to_merge_1819/b_benth.csv")
 write.csv(benthic_oe,"data_to_merge_1819/b_benth_oe.csv",row.names=FALSE)
 write.csv(chem,"data_to_merge_1819/c_chem_.csv",row.names=FALSE)
-#write.csv(land,"data_to_merge_1819/d_land.csv")
 write.csv(phab,"data_to_merge_1819/e_phab.csv",row.names=FALSE)
 
 write.csv(phab_oe,"data_to_merge_1819/f_phab_oe.csv",row.names=FALSE)
@@ -237,10 +230,6 @@ nrsa_strmcatv1<-left_join(nrsa_proc,strcat,
 #############
 ## DATA PROCESSING
 # Need to match survey climate vars to year of survey (originally in land_org dataset)
-# Create a YEAR column
-# Convert DATE_COL from a character to a date
-#nrsa_strmcatv1$DATE_COL<-as.Date(nrsa_strmcatv1$DATE_COL, format="%m/%d/%Y")
-#nrsa_strmcatv1$YEAR <-format(nrsa_strmcatv1$DATE_COL,"%Y")
 
 # SUBSET DATA BY YEAR
 first<-nrsa_strmcatv1%>%
@@ -314,7 +303,6 @@ length(unique(nrsa_strmcat1$SITE_ID)) # n = 1919
 # EXPORE DATA AS .csv files
 write.csv(nrsa_strmcat_proc,"data_processed/nrsa1819/nrsa1819_strmcat_all.csv", row.names=FALSE)
 write.csv(nrsa_strmcat1,"data_processed/nrsa1819/nrsa1819_strmcat_visit1.csv", row.names=FALSE)
-#colnames(nrsa_strmcat1)
 dat_names<-data.frame(colnames(nrsa_strmcat1))
 write.csv(dat_names,"data_processed/nrsa1819/column_vars1819.csv", row.names=FALSE)
 

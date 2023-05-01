@@ -8,7 +8,7 @@ rm(list=ls())
 # Libraries
 library(dplyr)
 library(tidyr)
-library(naniar)
+library(naniar) # package for exploring missing data
 
 library(devtools)
 devtools::load_all("./") # Loads current directory
@@ -17,7 +17,7 @@ library(SEMNRSA)
 # LOAD data stored in Rpackage - a .rda file
 #load(file="data/nrsa.rda")
 
-# ORIGINAL NRSA 2013-14 DATA downloaded from website 8/16/21
+# ORIGINAL NRSA 20108-09 DATA downloaded from website 8/16/21
 #siteinformation_wide,nrsa1314_widechem,bentmmi, landmet, phabmed
 
 # On OneDrive
@@ -39,7 +39,7 @@ isotope_org <- read.csv("C:/Users/EFergus/OneDrive - Environmental Protection Ag
 phab_oe_org<-read.csv("C:/Users/EFergus/OneDrive - Environmental Protection Agency (EPA)/a_NLA_OE_project/Data/NRSA_PHab_Discharge/NRSA_PHab_Discharge_OE891314.csv")
 wqii_org<-read.csv("C:/Users/EFergus/OneDrive - Environmental Protection Agency (EPA)/a_NLA_OE_project/Data/WQII/wqii_nrsa.csv")
 
-# FORMAT DATE IN SITE
+# FORMAT DATE IN SITE DATASET
 site_org$DATE_COL<-as.Date(site_org$DATE_COL, format="%d-%b-%y")
 summary(site_org$DATE_COL)
 str(site_org$DATE_COL)
@@ -78,10 +78,6 @@ chem <-chem_org[chem_vars]
 bent<-bent_org%>%
   rename("OE_SCORE_OLD"="OE_SCORE")%>%
   select(c("SITE_ID","VISIT_NO","MMI_BENT","OE_SCORE_OLD"))
-
-#land<-land_org%>%
-#  select(-c("PUBLICATION_DATE","UID","DATE_COL",
-#            "SITETYPE","INDEX_VISIT",'LAT_DD83',"LON_DD83"))
 
 phab <-phab_org%>%
   select(c("SITE_ID","VISIT_NO","PROTOCOL","XDEPTH_CM","SDDEPTH_CM",'XWIDTH',"XWXD","RP100","XBKF_W","XBKF_H","XINC_H","SINU","XSLOPE","REACHLEN",
@@ -141,9 +137,6 @@ strcat <-strcat_org%>%
 
 #####################
 ## PROCESS DATA WITH MULTIPLE SURVEYS _ SELECT 2008-09
-# Updated benthic O/E
-# PROCESS DATA - SELECT YEAR 2013-14
-# DATE_COL from a character to a date
 benthic_oe_org$DATE_COL<-as.Date(benthic_oe_org$DATE_COL, format="%m/%d/%Y")
 benthic_oe_org$YEAR <-format(benthic_oe_org$DATE_COL,"%Y")
 benthic_oe <-benthic_oe_org%>%
@@ -202,7 +195,6 @@ write.csv(site_org,"data_to_merge_0809/a_site.csv", row.names=FALSE)
 write.csv(bent,"data_to_merge_0809/b_benth.csv", row.names=FALSE)
 write.csv(benthic_oe,"data_to_merge_0809/c_benth_oe.csv", row.names=FALSE)
 write.csv(chem,"data_to_merge_0809/c_chem.csv", row.names=FALSE)
-#write.csv(land,"data_to_merge/d_land.csv", row.names=FALSE)
 write.csv(phab,"data_to_merge_0809/e_phab.csv", row.names=FALSE)
 
 write.csv(phab_oe,"data_to_merge_0809/f_phab_oe.csv", row.names=FALSE)
@@ -301,8 +293,6 @@ write.csv(nrsa1_0809,"data_processed/nrsa0809_visit1.csv",row.names = FALSE)
 ## MERGE STREAMCAT VARS
 # LOAD PROCESSED NRSA DATA n = 2261 obs
 #nrsa<-read.csv("C:/Users/EFergus/OneDrive - Environmental Protection Agency (EPA)/a_NLA_OE_project/Project_repository/SEMNRSA/data_processed/nrsa0809_all.csv")
-#nrsa1<-read.csv("C:/Users/EFergus/OneDrive - Environmental Protection Agency (EPA)/a_NLA_OE_project/Project_repository/SEMNRSA/data_processed/nrsa0809_visit1.csv")
-#names(nrsa)
 
 # Merge processed NRSA and StreamCat datasets together using left_join
 nrsa_strmcatv1<-left_join(nrsa_v2,strcat,
@@ -384,7 +374,6 @@ write.csv(nrsa_strmcat1,"data_processed/nrsa0809/nrsa0809_strmcat_visit1.csv",ro
 #colnames(nrsa_strmcat1)
 dat_names<-data.frame(colnames(nrsa_strmcat1))
 write.csv(dat_names,"data_processed/nrsa0809/column_vars0809.csv",row.names = FALSE)
-
 
 
 ################################
